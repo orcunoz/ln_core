@@ -15,6 +15,7 @@ class SettingsGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -26,10 +27,10 @@ class SettingsGroup extends StatelessWidget {
             ),
             child: Text(
               title!,
-              style: Theme.of(context).textTheme.labelMedium!.copyWith(
-                    color: Theme.of(context).primaryColor,
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: theme.textTheme.labelMedium!.copyWith(
+                color: theme.primaryColor,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         Card(
@@ -47,10 +48,7 @@ class SettingsGroup extends StatelessWidget {
                   ),
                 ),
             ].separated(
-              seperator: const Divider(
-                height: .5,
-                thickness: .5,
-              ),
+              seperator: const Divider(height: .5, thickness: .5),
             ),
           ),
         ),
@@ -91,31 +89,30 @@ class SettingsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Row(
       children: [
         IconTheme(
-          data: IconThemeData(color: Theme.of(context).hintColor, size: 22),
+          data: IconThemeData(color: theme.hintColor, size: 22),
           child: Icon(leadingIcon),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: DefaultTextStyle(
-            style: Theme.of(context).textTheme.bodyMedium ?? const TextStyle(),
+            style: theme.textTheme.bodyMedium ?? const TextStyle(),
             child: Text(titleText),
           ),
         ),
         if (trailing != null || trailingText != null)
           DefaultTextStyle(
-            style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: Theme.of(context).hintColor) ??
-                const TextStyle(),
+            style:
+                theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor) ??
+                    const TextStyle(),
             child: trailing ?? Text(trailingText!),
           ),
         if (trailingIcon != null)
           IconTheme(
-            data: IconThemeData(color: Theme.of(context).hintColor, size: 22),
+            data: IconThemeData(color: theme.hintColor, size: 22),
             child: Icon(trailingIcon),
           ),
       ],

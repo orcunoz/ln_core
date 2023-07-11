@@ -14,8 +14,10 @@ class Responsive extends Container {
           child: card
               ? ConstrainedBox(
                   constraints: BoxConstraints(
-                      maxWidth:
-                          double ? largeLayoutThreshold : smallLayoutThreshold),
+                    maxWidth: double
+                        ? 2 * smallLayoutThreshold
+                        : smallLayoutThreshold,
+                  ),
                   child: Card(
                     margin: margin,
                     child: padding == null
@@ -30,8 +32,11 @@ class Responsive extends Container {
                   padding: padding,
                   margin: margin,
                   constraints: BoxConstraints(
-                      maxWidth:
-                          double ? largeLayoutThreshold : smallLayoutThreshold),
+                    maxWidth: (double
+                            ? 2 * smallLayoutThreshold
+                            : smallLayoutThreshold) -
+                        (margin?.horizontal ?? 0),
+                  ),
                   child: child,
                 ),
         );

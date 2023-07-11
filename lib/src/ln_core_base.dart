@@ -17,6 +17,7 @@ export 'widgets/highlight_text.dart';
 export 'widgets/html_content.dart';
 export 'widgets/measure_size.dart';
 export 'widgets/progress_indicator_button.dart';
+export 'widgets/progress_indicator_icon.dart';
 export 'widgets/responsive.dart';
 export 'widgets/settings.dart';
 
