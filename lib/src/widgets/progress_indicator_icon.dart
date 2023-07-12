@@ -25,3 +25,29 @@ class ProgressIndicatorIcon extends StatelessWidget {
         : Icon(icon, color: iconColor);
   }
 }
+
+class ProgressIndicatorWidget extends StatelessWidget {
+  final Widget? widget;
+  final bool loading;
+
+  ProgressIndicatorWidget({
+    super.key,
+    required this.widget,
+    required this.loading,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final iconTheme = IconTheme.of(context);
+    final iconColor =
+        Theme.of(context).iconButtonTheme.style?.iconColor?.resolve({}) ??
+            iconTheme.color ??
+            Theme.of(context).colorScheme.onBackground;
+    return loading
+        ? CircularProgressIndicator(
+            strokeWidth: 2.5,
+            color: iconColor,
+          )
+        : (widget ?? SizedBox());
+  }
+}
