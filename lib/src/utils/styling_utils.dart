@@ -272,3 +272,109 @@ extension ThemeDataExtensions on ThemeData {
   TextStyle get defaultFormFieldStyle =>
       useMaterial3 ? textTheme.bodyLarge! : textTheme.titleMedium!;
 }
+
+class LeftlineInputBorder extends InputBorder {
+  const LeftlineInputBorder({
+    super.borderSide = const BorderSide(width: 6, color: Color(0xffFFB74D)),
+    this.borderRadius = const BorderRadius.all(Radius.circular(8.0)),
+  });
+
+  final BorderRadius borderRadius;
+
+  @override
+  bool get isOutline => true;
+
+  @override
+  UnderlineInputBorder copyWith(
+      {BorderSide? borderSide, BorderRadius? borderRadius}) {
+    return UnderlineInputBorder(
+      borderSide: borderSide ?? this.borderSide,
+      borderRadius: borderRadius ?? this.borderRadius,
+    );
+  }
+
+  @override
+  EdgeInsetsGeometry get dimensions {
+    return EdgeInsets.only(left: borderSide.width);
+  }
+
+  @override
+  LeftlineInputBorder scale(double t) {
+    return LeftlineInputBorder(borderSide: borderSide.scale(t));
+  }
+
+  @override
+  Path getInnerPath(Rect rect, {TextDirection? textDirection}) {
+    return Path()
+      ..addRect(Rect.fromLTWH(rect.left, rect.top,
+          math.max(0.0, rect.width - borderSide.width), rect.height));
+  }
+
+  @override
+  Path getOuterPath(Rect rect, {TextDirection? textDirection}) {
+    return Path()..addRRect(borderRadius.resolve(textDirection).toRRect(rect));
+  }
+
+  @override
+  void paintInterior(Canvas canvas, Rect rect, Paint paint,
+      {TextDirection? textDirection}) {
+    canvas.drawRRect(borderRadius.resolve(textDirection).toRRect(rect), paint);
+  }
+
+  @override
+  bool get preferPaintInterior => true;
+
+  @override
+  ShapeBorder? lerpFrom(ShapeBorder? a, double t) {
+    if (a is LeftlineInputBorder) {
+      return LeftlineInputBorder(
+        borderSide: BorderSide.lerp(a.borderSide, borderSide, t),
+        borderRadius: BorderRadius.lerp(a.borderRadius, borderRadius, t)!,
+      );
+    }
+    return super.lerpFrom(a, t);
+  }
+
+  @override
+  ShapeBorder? lerpTo(ShapeBorder? b, double t) {
+    if (b is LeftlineInputBorder) {
+      return LeftlineInputBorder(
+        borderSide: BorderSide.lerp(borderSide, b.borderSide, t),
+        borderRadius: BorderRadius.lerp(borderRadius, b.borderRadius, t)!,
+      );
+    }
+    return super.lerpTo(b, t);
+  }
+
+  @override
+  void paint(
+    Canvas canvas,
+    Rect rect, {
+    double? gapStart,
+    double gapExtent = 0.0,
+    double gapPercentage = 0.0,
+    TextDirection? textDirection,
+  }) {
+    if (borderRadius.topLeft != Radius.zero ||
+        borderRadius.bottomLeft != Radius.zero) {
+      canvas.clipPath(getOuterPath(rect, textDirection: textDirection));
+    }
+    canvas.drawLine(rect.topLeft, rect.bottomLeft, borderSide.toPaint());
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) {
+      return true;
+    }
+    if (other.runtimeType != runtimeType) {
+      return false;
+    }
+    return other is LeftlineInputBorder &&
+        other.borderSide == borderSide &&
+        other.borderRadius == borderRadius;
+  }
+
+  @override
+  int get hashCode => Object.hash(borderSide, borderRadius);
+}

@@ -49,7 +49,8 @@ class GlassMorphismCard extends StatelessWidget {
             image: noiseEffect == 0
                 ? null
                 : DecorationImage(
-                    image: const AssetImage('assets/images/television_noise.jpg'),
+                    image: const NetworkImage(
+                        'https://github.com/orcunoz/ln_core/blob/main/assets/images/television_noise.jpg?raw=true'),
                     fit: BoxFit.none,
                     repeat: ImageRepeat.repeat,
                     scale: 2,
