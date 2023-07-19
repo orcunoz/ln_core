@@ -4,11 +4,11 @@ import 'package:ln_core/ln_core.dart';
 import 'dart:math' as math;
 
 extension WidgetListExtensions<X extends Widget> on List<X> {
-  List<Widget> separated({Widget seperator = const Divider()}) {
+  List<Widget> separated({Widget separator = const Divider()}) {
     return [
       for (var child in this) ...[
         child,
-        if (child != last) seperator,
+        if (child != last) separator,
       ]
     ];
   }
@@ -59,6 +59,25 @@ class SpacedColumn extends Column {
         );
 }
 
+class SeparatedColumn extends Column {
+  SeparatedColumn({
+    super.key,
+    super.mainAxisAlignment,
+    super.mainAxisSize,
+    super.crossAxisAlignment,
+    super.textDirection,
+    super.verticalDirection,
+    super.textBaseline,
+    List<Widget> children = const <Widget>[],
+    Widget separator = const Divider(
+      height: .5,
+      thickness: .5,
+    ),
+  }) : super(
+          children: children.separated(separator: separator),
+        );
+}
+
 class SpacedRow extends Row {
   SpacedRow({
     super.key,
@@ -72,5 +91,24 @@ class SpacedRow extends Row {
     double spacing = formHorizontalSpacing,
   }) : super(
           children: children.spaced(width: spacing),
+        );
+}
+
+class SeperatedRow extends Row {
+  SeperatedRow({
+    super.key,
+    super.mainAxisAlignment,
+    super.mainAxisSize,
+    super.crossAxisAlignment,
+    super.textDirection,
+    super.verticalDirection,
+    super.textBaseline,
+    List<Widget> children = const <Widget>[],
+    Widget separator = const VerticalDivider(
+      width: .5,
+      thickness: .5,
+    ),
+  }) : super(
+          children: children.separated(separator: separator),
         );
 }

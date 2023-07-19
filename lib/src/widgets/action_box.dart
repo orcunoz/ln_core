@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+/*import 'package:flutter/material.dart';
 
 import 'package:ln_core/ln_core.dart';
 
@@ -38,20 +38,20 @@ class ActionBox extends StatelessWidget {
   }) {
     if (error == null) return const SizedBox();
 
-    if (error.runtimeType.toString() == "UserFriendlyException") {
-      if ((error as dynamic).statusCode == 401) {
+    if (error is UserFriendlyException) {
+      if (error.statusCode == 401) {
         return ActionBox.error(
           context: context,
-          message: (error as dynamic).message.isNotEmpty
-              ? (error as dynamic).message
-              : "Yetkisiz erişim denemesi!", // //S.of(context).customErrorUnauthorizedAccess;
+          message: error.message.isNotEmpty
+              ? error.message
+              : "Yetkisiz erişim denemesi!", // //S.current.customErrorUnauthorizedAccess;
           margin: margin,
           useDecoration: useDecoration,
         );
-      } else if (((error as dynamic).statusCode ?? 1000) < 500) {
+      } else if ((error.statusCode ?? 1000) < 500) {
         return ActionBox.error(
           context: context,
-          message: (error as dynamic).message,
+          message: error.message,
           margin: margin,
           useDecoration: useDecoration,
         );
@@ -61,7 +61,7 @@ class ActionBox extends StatelessWidget {
     return ActionBox.error(
       context: context,
       message:
-          "Bir şeyler ters gitti", // Todo: S.of(context).customErrorSomethingWentWrong,
+          "Bir şeyler ters gitti", // Todo: S.current.customErrorSomethingWentWrong,
       margin: margin,
       useDecoration: useDecoration,
     );
@@ -132,3 +132,4 @@ class ActionBox extends StatelessWidget {
     );
   }
 }
+*/

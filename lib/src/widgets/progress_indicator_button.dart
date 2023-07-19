@@ -14,9 +14,7 @@ class ProgressIndicatorButton extends StatelessWidget {
   final String labelText;
   final bool loading;
 
-  final MaterialStatesController _statesController;
-
-  ProgressIndicatorButton({
+  const ProgressIndicatorButton({
     super.key,
     this.onPressed,
     this.onLongPress,
@@ -30,7 +28,19 @@ class ProgressIndicatorButton extends StatelessWidget {
     this.icon,
     required this.labelText,
     required this.loading,
-  }) : _statesController = statesController ?? MaterialStatesController();
+  });
+
+  Widget _buildProgressCircle(BuildContext context) {
+    final theme = Theme.of(context);
+    return CircularProgressIndicator(
+      strokeWidth: 2.5,
+      color: (style?.foregroundColor ??
+              style?.iconColor ??
+              theme.filledButtonTheme.style?.foregroundColor ??
+              theme.filledButtonTheme.style?.iconColor)
+          ?.resolve({MaterialState.disabled}),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +54,7 @@ class ProgressIndicatorButton extends StatelessWidget {
             focusNode: focusNode,
             autofocus: autofocus,
             clipBehavior: clipBehavior,
-            statesController: _statesController,
+            statesController: statesController,
             icon: Icon(
               icon,
               color: loading ? Colors.transparent : null,
@@ -63,7 +73,7 @@ class ProgressIndicatorButton extends StatelessWidget {
             focusNode: focusNode,
             autofocus: autofocus ?? false,
             clipBehavior: clipBehavior ?? Clip.none,
-            statesController: _statesController,
+            statesController: statesController,
             child: Text(labelText),
           );
     return Stack(
@@ -74,17 +84,7 @@ class ProgressIndicatorButton extends StatelessWidget {
           SizedBox(
             width: 20,
             height: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.5,
-              color: (style?.foregroundColor ??
-                      style?.iconColor ??
-                      Theme.of(context)
-                          .filledButtonTheme
-                          .style
-                          ?.foregroundColor ??
-                      Theme.of(context).filledButtonTheme.style?.iconColor)
-                  ?.resolve({MaterialState.disabled}),
-            ),
+            child: _buildProgressCircle(context),
           )
       ],
     );

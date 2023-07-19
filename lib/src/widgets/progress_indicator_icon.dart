@@ -4,7 +4,7 @@ class ProgressIndicatorIcon extends StatelessWidget {
   final IconData? icon;
   final bool loading;
 
-  ProgressIndicatorIcon({
+  const ProgressIndicatorIcon({
     super.key,
     required this.icon,
     required this.loading,
@@ -12,11 +12,11 @@ class ProgressIndicatorIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final iconTheme = IconTheme.of(context);
-    final iconColor =
-        Theme.of(context).iconButtonTheme.style?.iconColor?.resolve({}) ??
-            iconTheme.color ??
-            Theme.of(context).colorScheme.onBackground;
+    final iconColor = theme.iconButtonTheme.style?.iconColor?.resolve({}) ??
+        iconTheme.color ??
+        theme.colorScheme.onBackground;
     return loading
         ? CircularProgressIndicator(
             strokeWidth: 2.5,
@@ -30,7 +30,7 @@ class ProgressIndicatorWidget extends StatelessWidget {
   final Widget? widget;
   final bool loading;
 
-  ProgressIndicatorWidget({
+  const ProgressIndicatorWidget({
     super.key,
     required this.widget,
     required this.loading,
@@ -38,11 +38,11 @@ class ProgressIndicatorWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final iconTheme = IconTheme.of(context);
-    final iconColor =
-        Theme.of(context).iconButtonTheme.style?.iconColor?.resolve({}) ??
-            iconTheme.color ??
-            Theme.of(context).colorScheme.onBackground;
+    final iconColor = theme.iconButtonTheme.style?.iconColor?.resolve({}) ??
+        iconTheme.color ??
+        theme.colorScheme.onBackground;
     return loading
         ? CircularProgressIndicator(
             strokeWidth: 2.5,

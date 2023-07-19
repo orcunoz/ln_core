@@ -4,9 +4,11 @@ import 'package:ln_core/ln_core.dart';
 import 'package:logger/logger.dart';
 import 'dart:math';
 
-final Logger _logger = Logger(
-    printer: HybridPrinter(SimplePrinter(),
-        error: PrettyPrinter(noBoxingByDefault: true)));
+final Logger _logger =
+    Logger(printer: HybridPrinter(SimplePrinter(), error: PrettyPrinter()));
+
+final Logger _coloredLogger = Logger(
+    printer: HybridPrinter(LnPrinter(color: AnsiColor.fg(33)), error: null));
 
 class Log {
   static i(dynamic message) {
@@ -16,14 +18,18 @@ class Log {
   static e(dynamic errorOrMessage, {StackTrace? stackTrace}) {
     Error? error = errorOrMessage is Error ? errorOrMessage : null;
 
-    _logger.e(errorOrMessage, error);
     if (stackTrace != null) {
-      _logger.e(errorOrMessage, error, stackTrace);
+      _logger.e(errorOrMessage, errorOrMessage, stackTrace);
     }
+    _logger.e(errorOrMessage, error);
   }
 
   static wtf(dynamic message) {
     _logger.wtf(_messageWithTime(message.toString()));
+  }
+
+  static colored(String part1, String part2) {
+    _coloredLogger.d("$part1.$part2");
   }
 
   static String _messageWithTime(String message) {

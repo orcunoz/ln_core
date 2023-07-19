@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+/*import 'package:flutter/material.dart';
 import 'package:ln_core/ln_core.dart';
 
 class CustomError extends StatelessWidget {
@@ -71,7 +71,7 @@ class CustomError extends StatelessWidget {
   })  : icon = Icons.error_outline_rounded,
         iconColor = Theme.of(context).colorScheme.error,
         message =
-            "Bir şeyler ters gitti!"; // TODO: S.of(context).customErrorSomethingWentWrong;
+            "Bir şeyler ters gitti!"; // TODO: S.current.customErrorSomethingWentWrong;
 
   CustomError.noResultsFound({
     super.key,
@@ -82,7 +82,7 @@ class CustomError extends StatelessWidget {
   })  : icon = Icons.web_asset_off_rounded,
         iconColor = Theme.of(context).hintColor,
         message = message ??
-            "Hiçbir sonuç bulunamadı!", // TODO: S.of(context).customErrorNoResultsFound,
+            "Hiçbir sonuç bulunamadı!", // TODO: S.current.customErrorNoResultsFound,
         onPressRetry = null;
 
   CustomError.unauthorized({
@@ -95,7 +95,7 @@ class CustomError extends StatelessWidget {
   })  : icon = Icons.lock_person_outlined,
         iconColor = Colors.yellow,
         message = message ??
-            "Yetkisiz erişim denemesi!"; //S.of(context).customErrorUnauthorizedAccess;
+            "Yetkisiz erişim denemesi!"; //S.current.customErrorUnauthorizedAccess;
 
   @override
   Widget build(BuildContext context) {
@@ -140,3 +140,4 @@ class CustomError extends StatelessWidget {
     return card ? Card(child: child) : child;
   }
 }
+*/

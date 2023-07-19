@@ -35,7 +35,8 @@ class SettingsGroup extends StatelessWidget {
           ),
         Card(
           margin: EdgeInsets.zero,
-          child: Column(
+          child: SeparatedColumn(
+            separator: const Divider(height: .5, thickness: .5),
             children: [
               for (var row in rows)
                 InkWell(
@@ -47,9 +48,7 @@ class SettingsGroup extends StatelessWidget {
                     child: row,
                   ),
                 ),
-            ].separated(
-              seperator: const Divider(height: .5, thickness: .5),
-            ),
+            ],
           ),
         ),
       ],
