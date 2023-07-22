@@ -18,9 +18,13 @@ class ProgressIndicatorIcon extends StatelessWidget {
         iconTheme.color ??
         theme.colorScheme.onBackground;
     return loading
-        ? CircularProgressIndicator(
-            strokeWidth: 2.5,
-            color: iconColor,
+        ? SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              color: iconColor,
+            ),
           )
         : Icon(icon, color: iconColor);
   }
@@ -44,9 +48,13 @@ class ProgressIndicatorWidget extends StatelessWidget {
         iconTheme.color ??
         theme.colorScheme.onBackground;
     return loading
-        ? CircularProgressIndicator(
-            strokeWidth: 2.5,
-            color: iconColor,
+        ? SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              color: iconColor,
+            ),
           )
         : (widget ?? SizedBox());
   }

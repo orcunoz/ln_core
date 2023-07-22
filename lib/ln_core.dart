@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 
 export 'src/ln_state.dart';
 
-export 'src/localization/localizing_scope.dart';
-export 'src/localization/locale.dart';
+export 'src/localization/localizations_delegate.dart';
+export 'src/localization/localizations.dart';
 
 export 'src/utils/date_time_utils.dart';
 export 'src/utils/file_utils.dart';

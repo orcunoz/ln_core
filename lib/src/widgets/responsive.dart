@@ -20,7 +20,7 @@ class Responsive extends Container {
                   ),
                   child: Card(
                     margin: margin,
-                    child: padding == null
+                    child: padding == null || padding == EdgeInsets.zero
                         ? child
                         : Padding(
                             padding: padding,
