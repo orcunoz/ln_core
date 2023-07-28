@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-class ProgressIndicatorIcon extends StatelessWidget {
-  final IconData? icon;
+class ProgressIndicatorWidget extends StatelessWidget {
+  final Widget? widget;
   final bool loading;
 
-  const ProgressIndicatorIcon({
+  const ProgressIndicatorWidget({
     super.key,
-    required this.icon,
+    required this.widget,
     required this.loading,
   });
 
@@ -26,6 +26,6 @@ class ProgressIndicatorIcon extends StatelessWidget {
               color: iconColor,
             ),
           )
-        : Icon(icon, color: iconColor);
+        : (widget ?? SizedBox());
   }
 }

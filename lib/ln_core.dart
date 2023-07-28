@@ -8,6 +8,7 @@ export 'src/localization/localizations_delegate.dart';
 export 'src/localization/localizations.dart';
 
 export 'src/utils/date_time_utils.dart';
+export 'src/utils/device_utils.dart';
 export 'src/utils/file_utils.dart';
 export 'src/utils/layout_utils.dart';
 export 'src/utils/logger.dart';
@@ -16,15 +17,21 @@ export 'src/utils/string_utils.dart';
 export 'src/utils/styling_utils.dart';
 
 export 'src/widgets/action_box.dart';
+export 'src/widgets/backdrop.dart';
+export 'src/widgets/copyable_card.dart';
 export 'src/widgets/custom_error.dart';
+export 'src/widgets/dots_indicator.dart';
 export 'src/widgets/elevated_image.dart';
 export 'src/widgets/glass_morphism_card.dart';
 export 'src/widgets/highlight_text.dart';
 export 'src/widgets/html_content.dart';
-export 'src/widgets/measure_size.dart';
-export 'src/widgets/progress_indicator_button.dart';
+export 'src/widgets/measurable.dart';
+export 'src/widgets/precision_divider.dart';
 export 'src/widgets/progress_indicator_icon.dart';
+export 'src/widgets/progress_indicator_layer.dart';
+export 'src/widgets/progress_indicator_widget.dart';
 export 'src/widgets/responsive.dart';
+export 'src/widgets/selectable_card.dart';
 export 'src/widgets/settings.dart';
 
 export 'src/models/wrapped.dart';
