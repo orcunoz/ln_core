@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:ln_core/ln_core.dart';
 import 'package:flutter/material.dart';
+import 'package:ln_core/src/localization/core_localizations.dart';
 
 class CopyableCard extends StatefulWidget {
   final String text;
@@ -75,7 +76,7 @@ class _CopyableCardState extends State<CopyableCard> {
                         color: theme.colorScheme.primary,
                       ),
                       Text(
-                        "S.current.copy", // TODO
+                        LnCoreLocalizations.current.copy,
                         style: TextStyle(
                           color: theme.colorScheme.primary,
                         ),
@@ -93,8 +94,7 @@ class _CopyableCardState extends State<CopyableCard> {
                 margin: EdgeInsets.zero,
                 child: Center(
                   child: Text(
-                    widget.copyMessage ??
-                        "S.current.linkCopiedToClipboard", // TODO
+                    LnCoreLocalizations.current.linkCopiedToClipboard,
                     style: TextStyle(color: theme.colorScheme.primary),
                   ),
                 ),

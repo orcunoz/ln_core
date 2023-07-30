@@ -64,6 +64,38 @@ class DeviceUtils {
     }
   }
 
+  static Future<void> initializeDesktopWindow({
+    Size? size = const Size(kInitialWindowWidth, kInitialWindowHeight),
+    bool? center = true,
+    Size? minimumSize = const Size(kMinimumWindowWidth, kMinimumWindowHeight),
+    Size? maximumSize,
+    bool? alwaysOnTop,
+    bool? fullScreen,
+    Color? backgroundColor = Colors.transparent,
+    bool? skipTaskbar = false,
+    String? title,
+    TitleBarStyle? titleBarStyle = TitleBarStyle.hidden,
+    bool? windowButtonVisibility,
+  }) async {
+    await windowManager.ensureInitialized();
+    await windowManager.waitUntilReadyToShow(WindowOptions(
+      size: size,
+      center: center,
+      minimumSize: minimumSize,
+      maximumSize: maximumSize,
+      alwaysOnTop: alwaysOnTop,
+      fullScreen: fullScreen,
+      backgroundColor: backgroundColor,
+      skipTaskbar: skipTaskbar,
+      title: title,
+      titleBarStyle: titleBarStyle,
+      windowButtonVisibility: windowButtonVisibility,
+    ));
+    //await windowManager.setAsFrameless();
+    await windowManager.show();
+    await windowManager.focus();
+  }
+
   static exitApp() {
     if (UniversalPlatform.isAndroid) {
       SystemNavigator.pop();

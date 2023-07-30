@@ -1,5 +1,36 @@
 import 'package:flutter/material.dart';
+
 import 'dart:math' as math;
+
+extension BorderRaduisGeometryExtensions on BorderRadiusGeometry {
+  BorderRadius at(BuildContext context) {
+    return this is BorderRadius
+        ? this as BorderRadius
+        : resolve(Directionality.of(context));
+  }
+}
+
+extension InputDecorationExtensions on InputDecoration {
+  InputBorder? get defaultBorder => (border ?? enabledBorder ?? focusedBorder);
+
+  BorderRadius? get borderRadius => defaultBorder?.borderRadius;
+
+  BorderSide? get borderSide => defaultBorder?.borderSide;
+
+  InputBorder get readOnlyBorder =>
+      defaultBorder?.frameless ?? InputBorder.none;
+}
+
+extension InputDecorationThemeExtensions on InputDecorationTheme {
+  InputBorder? get defaultBorder => (border ?? enabledBorder ?? focusedBorder);
+
+  BorderRadius? get borderRadius => defaultBorder?.borderRadius;
+
+  BorderSide? get borderSide => defaultBorder?.borderSide;
+
+  InputBorder get readOnlyBorder =>
+      defaultBorder?.frameless ?? InputBorder.none;
+}
 
 extension ShapeBorderExtensions on ShapeBorder {
   ShapeBorder? get frameless {
@@ -118,159 +149,6 @@ extension OutlinedBorderExtensions on OutlinedBorder {
         throw Exception("Unexpected OutlinedBorder type!");
     }
   }
-}
-
-extension InputDecorationExtensions on InputDecoration {
-  InputBorder? get defaultBorder => (border ?? enabledBorder ?? focusedBorder);
-
-  BorderRadius? get borderRadius => defaultBorder?.borderRadius;
-
-  BorderSide? get borderSide => defaultBorder?.borderSide;
-
-  InputBorder get readOnlyBorder =>
-      defaultBorder?.frameless ?? InputBorder.none;
-}
-
-extension InputDecorationThemeExtensions on InputDecorationTheme {
-  InputBorder? get defaultBorder => (border ?? enabledBorder ?? focusedBorder);
-
-  BorderRadius? get borderRadius => defaultBorder?.borderRadius;
-
-  BorderSide? get borderSide => defaultBorder?.borderSide;
-
-  InputBorder get readOnlyBorder =>
-      defaultBorder?.frameless ?? InputBorder.none;
-}
-
-extension ColorExtensions on Color {
-  MaterialStatePropertyAll<Color> get material =>
-      MaterialStatePropertyAll(this);
-
-  Color get onColor =>
-      ThemeData.estimateBrightnessForColor(this) == Brightness.light
-          ? Colors.black
-          : Colors.white;
-
-  bool get isLight =>
-      ThemeData.estimateBrightnessForColor(this) == Brightness.light;
-
-  bool get isDark =>
-      ThemeData.estimateBrightnessForColor(this) == Brightness.dark;
-
-  Color lighten([final int amount = 10]) {
-    if (amount <= 0) return this;
-    if (amount > 100) return Colors.white;
-    final HSLColor hsl = this == const Color(0xFF000000)
-        ? HSLColor.fromColor(this).withSaturation(0)
-        : HSLColor.fromColor(this);
-    return hsl
-        .withLightness(math.min(1, math.max(0, hsl.lightness + amount / 100)))
-        .toColor();
-  }
-
-  Color darken([final int amount = 10]) {
-    if (amount <= 0) return this;
-    if (amount > 100) return Colors.black;
-    final HSLColor hsl = HSLColor.fromColor(this);
-    return hsl
-        .withLightness(math.min(1, math.max(0, hsl.lightness - amount / 100)))
-        .toColor();
-  }
-
-  Color blend(final Color input, [final int amount = 10]) {
-    if (amount <= 0) return this;
-    if (amount >= 100) return input;
-    return Color.alphaBlend(input.withAlpha(255 * amount ~/ 100), this);
-  }
-
-  Color blendAlpha(final Color input, [final int alpha = 0x0A]) {
-    if (alpha <= 0) return this;
-    if (alpha >= 255) return input;
-    return Color.alphaBlend(input.withAlpha(alpha), this);
-  }
-}
-
-extension BorderRaduisGeometryExtensions on BorderRadiusGeometry {
-  BorderRadius at(BuildContext context) {
-    return this is BorderRadius
-        ? this as BorderRadius
-        : resolve(Directionality.of(context));
-  }
-}
-
-extension EdgeInsetsExtensions on EdgeInsets {
-  EdgeInsets symetricScale({num vertical = 1, num horizontal = 1}) => copyWith(
-        left: left * horizontal,
-        right: right * horizontal,
-        top: top * vertical,
-        bottom: bottom * vertical,
-      );
-
-  MaterialStateProperty<EdgeInsets> get material =>
-      MaterialStatePropertyAll(this);
-}
-
-extension EdgeInsetsGeometryExtensions on EdgeInsetsGeometry {
-  EdgeInsetsGeometry get double => add(this);
-
-  EdgeInsets at(BuildContext context) => this is EdgeInsets
-      ? this as EdgeInsets
-      : resolve(Directionality.of(context));
-
-  MaterialStateProperty<EdgeInsetsGeometry> get material =>
-      MaterialStatePropertyAll(this);
-}
-
-extension StringColorExtensions on String {
-  Color get toColor {
-    if (this == '') return const Color(0xFF000000);
-    String hexColor = replaceAll('#', '');
-    hexColor = hexColor.replaceAll('0x', '');
-    hexColor = hexColor.padLeft(6, '0');
-    hexColor = hexColor.padLeft(8, 'F');
-    final int length = hexColor.length;
-    return Color(int.tryParse('0x${hexColor.substring(length - 8, length)}') ??
-        0xFF000000);
-  }
-}
-
-extension ShadowExtensions on Shadow {
-  List<BoxShadow> inList() {
-    return [asBox()];
-  }
-
-  BoxShadow asBox() {
-    return BoxShadow(
-      color: color,
-      blurRadius: blurRadius,
-      offset: offset,
-    );
-  }
-}
-
-class ElevationShadow extends Shadow {
-  ElevationShadow(double elevation, {Color color = Colors.black})
-      : assert(elevation >= 0 && elevation <= 50),
-        super(
-          color: color.withOpacity(.25 + elevation * 0.1),
-          blurRadius: (1 + (19.0 / 23.0) * (elevation - 1)),
-          offset: Offset(0, elevation * 0.75),
-        );
-}
-
-class ElevationBoxShadow extends BoxShadow {
-  ElevationBoxShadow(double elevation, {Color color = Colors.black})
-      : assert(elevation >= 0 && elevation <= 50),
-        super(
-          color: color.withOpacity(.25 + elevation * 0.1),
-          blurRadius: (1 + (19.0 / 23.0) * (elevation - 1)),
-          offset: Offset(0, elevation * 0.75),
-        );
-}
-
-extension ThemeDataExtensions on ThemeData {
-  TextStyle get defaultFormFieldStyle =>
-      useMaterial3 ? textTheme.bodyLarge! : textTheme.titleMedium!;
 }
 
 class LeftlineInputBorder extends InputBorder {

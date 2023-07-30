@@ -14,13 +14,15 @@ export 'src/utils/layout_utils.dart';
 export 'src/utils/logger.dart';
 export 'src/utils/regex_utils.dart';
 export 'src/utils/string_utils.dart';
-export 'src/utils/styling_utils.dart';
 
-export 'src/widgets/action_box.dart';
+export 'src/utils/styling/common.dart';
+export 'src/utils/styling/borders.dart';
+export 'src/utils/styling/shadows.dart';
+
 export 'src/widgets/backdrop.dart';
 export 'src/widgets/copyable_card.dart';
-export 'src/widgets/custom_error.dart';
 export 'src/widgets/dots_indicator.dart';
+export 'src/widgets/draggable_app_bar.dart';
 export 'src/widgets/elevated_image.dart';
 export 'src/widgets/glass_morphism_card.dart';
 export 'src/widgets/highlight_text.dart';
@@ -33,6 +35,7 @@ export 'src/widgets/progress_indicator_widget.dart';
 export 'src/widgets/responsive.dart';
 export 'src/widgets/selectable_card.dart';
 export 'src/widgets/settings.dart';
+export 'src/widgets/window_icons.dart';
 
 export 'src/models/wrapped.dart';
 
