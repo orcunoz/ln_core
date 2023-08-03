@@ -112,3 +112,19 @@ class SeperatedRow extends Row {
           children: children.separated(separator: separator),
         );
 }
+
+class SpacedWrap extends Wrap {
+  const SpacedWrap({
+    super.key,
+    super.direction,
+    super.alignment,
+    super.spacing = formHorizontalSpacing,
+    super.runAlignment,
+    super.runSpacing = formVerticalSpacing,
+    super.crossAxisAlignment,
+    super.textDirection,
+    super.verticalDirection,
+    super.clipBehavior,
+    super.children,
+  });
+}

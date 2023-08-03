@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:ln_core/ln_core.dart';
 import 'package:flutter/material.dart';
-import 'package:ln_core/src/localization/core_localizations.dart';
+import 'package:ln_core/src/localization/localizations.dart';
 
 class CopyableCard extends StatefulWidget {
   final String text;
@@ -55,8 +55,9 @@ class _CopyableCardState extends State<CopyableCard> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
+                  child: Container(
+                    padding: const EdgeInsets.all(12.0),
+                    alignment: Alignment.centerLeft,
                     child: Text(
                       widget.text,
                       style: theme.textTheme.labelMedium,
@@ -66,7 +67,8 @@ class _CopyableCardState extends State<CopyableCard> {
                 PrecisionVerticalDivider(color: borderColor),
                 Container(
                   color: theme.highlightColor,
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(12),
+                  alignment: Alignment.center,
                   child: SpacedRow(
                     spacing: 6,
                     children: [
@@ -76,7 +78,7 @@ class _CopyableCardState extends State<CopyableCard> {
                         color: theme.colorScheme.primary,
                       ),
                       Text(
-                        LnCoreLocalizations.current.copy,
+                        LnLocalizations.current.copy,
                         style: TextStyle(
                           color: theme.colorScheme.primary,
                         ),
@@ -94,7 +96,7 @@ class _CopyableCardState extends State<CopyableCard> {
                 margin: EdgeInsets.zero,
                 child: Center(
                   child: Text(
-                    LnCoreLocalizations.current.linkCopiedToClipboard,
+                    LnLocalizations.current.linkCopiedToClipboard,
                     style: TextStyle(color: theme.colorScheme.primary),
                   ),
                 ),

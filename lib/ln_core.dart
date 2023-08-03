@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 export 'src/ln_state.dart';
 
 export 'src/localization/localizations_delegate.dart';
+export 'src/localization/localizations_base.dart';
 export 'src/localization/localizations.dart';
 
 export 'src/utils/date_time_utils.dart';

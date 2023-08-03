@@ -11,3 +11,8 @@ abstract class LnState<T extends StatefulWidget> extends State<T> {
     });
   }
 }
+
+extension FunctionExtensions on Function {
+  nullIf(bool expression) => expression ? null : this;
+  nullIfNot(bool expression) => !expression ? null : this;
+}

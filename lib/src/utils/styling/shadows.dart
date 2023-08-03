@@ -18,7 +18,7 @@ class ElevationShadow extends Shadow {
   ElevationShadow(double elevation, {Color color = Colors.black})
       : assert(elevation >= 0 && elevation <= 50),
         super(
-          color: color.withOpacity(.25 + elevation * 0.1),
+          color: color.withOpacity((.25 + elevation * 0.1) * color.opacity),
           blurRadius: (1 + (19.0 / 23.0) * (elevation - 1)),
           offset: Offset(0, elevation * 0.75),
         );

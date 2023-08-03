@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import 'localizations.dart';
+import 'localizations_base.dart';
 
-class LnLocalizationsDelegate<T extends LnLocalizations>
+class LnLocalizationsDelegate<T extends LnLocalizationsBase>
     extends LocalizationsDelegate<T> {
   final void Function(T locale)? onLoad;
   final List<T> locales;
