@@ -36,6 +36,7 @@ export 'src/widgets/progress_indicator_widget.dart';
 export 'src/widgets/responsive.dart';
 export 'src/widgets/selectable_card.dart';
 export 'src/widgets/settings.dart';
+export 'src/widgets/vertical_text.dart';
 export 'src/widgets/window_icons.dart';
 
 export 'src/models/wrapped.dart';
