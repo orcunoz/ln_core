@@ -4,11 +4,17 @@ abstract class LnState<T extends StatefulWidget> extends State<T> {
   int _generation = 0;
   int get generation => _generation;
 
-  void rebuild() {
+  void rebuild({bool withWidgetsBindingCallback = false}) {
     if (!mounted) return;
-    setState(() {
-      ++_generation;
-    });
+    rebuildFunc() => setState(() {
+          ++_generation;
+        });
+
+    withWidgetsBindingCallback
+        ? WidgetsBinding.instance.addPostFrameCallback(
+            (timeStamp) => rebuildFunc(),
+          )
+        : rebuildFunc();
   }
 }
 
