@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:ln_core/ln_core.dart';
 import 'package:flutter/material.dart';
-import 'package:ln_core/src/localization/localizations.dart';
 
 class CopyableCard extends StatefulWidget {
   final String text;

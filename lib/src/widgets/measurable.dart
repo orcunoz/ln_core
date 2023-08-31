@@ -1,31 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
-typedef OnSizeChange = void Function(Size? size);
-
 class Measurable extends SingleChildRenderObjectWidget {
-  const Measurable({super.key, required this.onChange, required super.child});
+  const Measurable({
+    super.key,
+    this.onLayout,
+    this.afterLayout,
+    required super.child,
+  });
 
-  final OnSizeChange onChange;
+  final ValueChanged<Size>? onLayout;
+  final ValueChanged<Size>? afterLayout;
 
   @override
   RenderObject createRenderObject(BuildContext context) =>
-      _MeasureSizeRenderObject(onChange);
+      _MeasurableRenderObject(onLayout, afterLayout);
 }
 
-class _MeasureSizeRenderObject extends RenderProxyBox {
-  _MeasureSizeRenderObject(this.onChange);
+class _MeasurableRenderObject extends RenderProxyBox {
+  _MeasurableRenderObject(this.onLayout, this.afterLayout);
 
-  final OnSizeChange onChange;
-  Size? _savedSize;
+  final ValueChanged<Size>? onLayout;
+  final ValueChanged<Size>? afterLayout;
 
   @override
   void performLayout() {
     super.performLayout();
-    final newSize = child?.size;
-    if (_savedSize != newSize) {
-      _savedSize = newSize;
-      WidgetsBinding.instance.addPostFrameCallback((_) => onChange(newSize));
+
+    if (onLayout != null) onLayout!(size);
+    if (afterLayout != null) {
+      WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+        afterLayout!(size);
+      });
     }
   }
 }

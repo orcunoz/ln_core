@@ -1,31 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:ln_core/src/widgets/progress_indicator_box.dart';
 
 class ProgressIndicatorIcon extends StatelessWidget {
   final IconData? icon;
-  final bool loading;
+  final Color? color;
+  final double? size;
+  final bool progress;
 
   const ProgressIndicatorIcon({
     super.key,
     required this.icon,
-    required this.loading,
+    required this.progress,
+    this.color,
+    this.size,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final iconTheme = IconTheme.of(context);
-    final iconColor = theme.iconButtonTheme.style?.iconColor?.resolve({}) ??
+    final color = this.color ??
+        Theme.of(context).iconButtonTheme.style?.iconColor?.resolve({}) ??
         iconTheme.color ??
-        theme.colorScheme.onBackground;
-    return loading
-        ? SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.5,
-              color: iconColor,
-            ),
+        Theme.of(context).colorScheme.onBackground;
+    final size =
+        this.size ?? iconTheme.size ?? Theme.of(context).iconTheme.size ?? 24;
+    return progress
+        ? ProgressIndicatorBox(
+            size: size,
+            color: color,
           )
-        : Icon(icon, color: iconColor);
+        : Icon(icon, size: size, color: color);
   }
 }

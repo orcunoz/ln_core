@@ -1,19 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:ln_core/ln_core.dart';
 
-class Backdrop extends InheritedWidget {
-  final BackdropScaffoldState data;
+class _BackdropScope extends InheritedWidget {
+  final BackdropState state;
 
-  const Backdrop({super.key, required this.data, required super.child});
-
-  static BackdropScaffoldState of(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<Backdrop>()!.data;
+  const _BackdropScope({required this.state, required super.child});
 
   @override
-  bool updateShouldNotify(Backdrop oldWidget) => oldWidget.data != data;
+  bool updateShouldNotify(_BackdropScope oldWidget) => oldWidget.state != state;
 }
 
-class BackdropScaffold extends StatefulWidget {
+class Backdrop extends StatefulWidget {
   final Duration animationDuration;
   final Widget backLayer;
   final Widget frontLayer;
@@ -31,7 +28,7 @@ class BackdropScaffold extends StatefulWidget {
   final VoidCallback? whenOpen;
   final VoidCallback? whenClosed;
 
-  BackdropScaffold({
+  Backdrop({
     super.key,
     this.animationDuration = const Duration(milliseconds: 500),
     required this.backLayer,
@@ -54,10 +51,13 @@ class BackdropScaffold extends StatefulWidget {
   }) : frontLayerActiveFactor = frontLayerActiveFactor.clamp(0, 1).toDouble();
 
   @override
-  BackdropScaffoldState createState() => BackdropScaffoldState();
+  BackdropState createState() => BackdropState();
+
+  static BackdropState of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_BackdropScope>()!.state;
 }
 
-class BackdropScaffoldState extends State<BackdropScaffold>
+class BackdropState extends State<Backdrop>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late ColorTween _backLayerScrimColorTween;
@@ -81,7 +81,7 @@ class BackdropScaffoldState extends State<BackdropScaffold>
   }
 
   @override
-  void didUpdateWidget(covariant BackdropScaffold oldWidget) {
+  void didUpdateWidget(covariant Backdrop oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.backLayerScrim != widget.backLayerScrim) {
       _backLayerScrimColorTween = _buildBackLayerScrimColorTween();
@@ -181,8 +181,8 @@ class BackdropScaffoldState extends State<BackdropScaffold>
               children: <Widget>[
                 Flexible(
                   child: Measurable(
-                    onChange: (size) =>
-                        setState(() => _backPanelHeight = size?.height),
+                    afterLayout: (size) =>
+                        setState(() => _backPanelHeight = size.height),
                     child: widget.backLayer,
                   ),
                 ),
@@ -251,8 +251,8 @@ class BackdropScaffoldState extends State<BackdropScaffold>
 
   @override
   Widget build(BuildContext context) {
-    return Backdrop(
-      data: this,
+    return _BackdropScope(
+      state: this,
       child: Builder(
         builder: (context) => _buildBody(context),
       ),

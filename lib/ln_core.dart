@@ -10,17 +10,21 @@ export 'src/localization/localizations.dart';
 
 export 'src/utils/date_time_utils.dart';
 export 'src/utils/device_utils.dart';
+export 'src/utils/dynamic_function.dart';
 export 'src/utils/file_utils.dart';
 export 'src/utils/layout_utils.dart';
 export 'src/utils/logger.dart';
 export 'src/utils/regex_utils.dart';
 export 'src/utils/string_utils.dart';
+export 'src/utils/throttle_debounce.dart';
 
 export 'src/utils/styling/common.dart';
 export 'src/utils/styling/borders.dart';
 export 'src/utils/styling/shadows.dart';
 
 export 'src/widgets/backdrop.dart';
+export 'src/widgets/blur_layer.dart';
+export 'src/widgets/clean_area_and_darkened_outside.dart';
 export 'src/widgets/copyable_card.dart';
 export 'src/widgets/dots_indicator.dart';
 export 'src/widgets/draggable_app_bar.dart';
@@ -28,14 +32,19 @@ export 'src/widgets/elevated_image.dart';
 export 'src/widgets/glass_morphism_card.dart';
 export 'src/widgets/highlight_text.dart';
 export 'src/widgets/html_content.dart';
+export 'src/widgets/keyboard_dismiss_gestures_handler.dart';
 export 'src/widgets/measurable.dart';
 export 'src/widgets/precision_divider.dart';
+export 'src/widgets/progress_indicator_box.dart';
 export 'src/widgets/progress_indicator_icon.dart';
-export 'src/widgets/progress_indicator_layer.dart';
+export 'src/widgets/progress_indicator_stack.dart';
 export 'src/widgets/progress_indicator_widget.dart';
 export 'src/widgets/responsive.dart';
+export 'src/widgets/searchable_content.dart';
 export 'src/widgets/selectable_card.dart';
 export 'src/widgets/settings.dart';
+export 'src/widgets/sieve_area.dart';
+export 'src/widgets/sliding_drawers_area.dart';
 export 'src/widgets/vertical_text.dart';
 export 'src/widgets/window_icons.dart';
 
