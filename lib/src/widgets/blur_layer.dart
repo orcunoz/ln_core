@@ -6,56 +6,57 @@ import 'dart:math' as math;
 const _kBlurSigmaX = 5;
 const _kBlurSigmaY = 8;
 
-class BlurLayer extends StatelessWidget {
-  final double effectFactor;
-  final Widget? child;
-  final Alignment alignment;
-  const BlurLayer({
+class BlurryLayer extends StatelessWidget {
+  const BlurryLayer({
     super.key,
     this.effectFactor = .2,
     this.alignment = Alignment.center,
     this.child,
   }) : assert(effectFactor >= 0 && effectFactor <= 1);
 
+  final double effectFactor;
+  final Widget? child;
+  final Alignment alignment;
+
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: _kBlurSigmaX * effectFactor,
-          sigmaY: _kBlurSigmaY * effectFactor,
-        ),
-        child: Align(
-          alignment: alignment,
-          child: child,
-        ),
+    return BackdropFilter(
+      filter: ImageFilter.blur(
+        sigmaX: _kBlurSigmaX * effectFactor,
+        sigmaY: _kBlurSigmaY * effectFactor,
+      ),
+      child: Align(
+        alignment: alignment,
+        child: child,
       ),
     );
   }
 }
 
-class AnimatedBlurLayer extends ImplicitlyAnimatedWidget {
-  final bool enabled;
-  final bool sharpClarity;
-  final double effectFactor;
-  final Widget? child;
-
-  const AnimatedBlurLayer({
+class AnimatedBlurryLayer extends ImplicitlyAnimatedWidget {
+  const AnimatedBlurryLayer({
     super.key,
     this.enabled = true,
     this.sharpClarity = true,
     this.effectFactor = .2,
+    this.alignment = Alignment.center,
     super.duration = const Duration(milliseconds: 500),
     this.child,
   }) : assert(effectFactor >= 0 && effectFactor <= 1);
 
+  final bool enabled;
+  final bool sharpClarity;
+  final double effectFactor;
+  final Alignment alignment;
+  final Widget? child;
+
   @override
-  ImplicitlyAnimatedWidgetState<AnimatedBlurLayer> createState() =>
+  ImplicitlyAnimatedWidgetState<AnimatedBlurryLayer> createState() =>
       _AnimatedBlurLayerState();
 }
 
 class _AnimatedBlurLayerState
-    extends ImplicitlyAnimatedWidgetState<AnimatedBlurLayer> {
+    extends AnimatedWidgetBaseState<AnimatedBlurryLayer> {
   Tween<double>? _blurValue;
   late Animation<double> _animation;
 
@@ -77,26 +78,14 @@ class _AnimatedBlurLayerState
   @override
   Widget build(BuildContext context) {
     final instantTransition = widget.sharpClarity && !widget.enabled;
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (context, child) {
-        final animatedValue = instantTransition ? .0 : _animation.value;
-        final opacity = math.min(animatedValue * 2, 1.0);
-
-        return Offstage(
-          offstage: animatedValue == 0,
-          child: AbsorbPointer(
-            child: BlurLayer(
-              effectFactor: animatedValue * widget.effectFactor,
-              child: Opacity(
-                opacity: opacity,
-                child: child,
-              ),
-            ),
-          ),
-        );
-      },
-      child: widget.child,
+    return BlurryLayer(
+      alignment: widget.alignment,
+      effectFactor:
+          instantTransition ? 0 : _animation.value * widget.effectFactor,
+      child: Opacity(
+        opacity: math.min(_animation.value * 2, 1.0),
+        child: widget.child,
+      ),
     );
   }
 }

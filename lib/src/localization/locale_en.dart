@@ -41,4 +41,7 @@ class LocaleEn implements LnLocalizations {
 
   @override
   String get unauthorizedAccess => "Unauthorized access";
+
+  @override
+  String get refresh => "Refresh";
 }

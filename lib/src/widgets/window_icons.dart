@@ -11,21 +11,20 @@ Offset? _lastSavedPosition;
 Size? _lastSavedSize;
 
 class WindowIcons extends StatelessWidget {
-  final Color? color;
+  const WindowIcons({
+    super.key,
+    this.iconSize,
+  });
   final double? iconSize;
-  const WindowIcons({super.key, this.color, this.iconSize});
 
   @override
   Widget build(BuildContext context) {
-    final child = Row(
+    return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         IconButton(
           onPressed: windowManager.minimize,
-          icon: Icon(
-            Icons.minimize,
-            color: color,
-          ),
+          icon: Icon(Icons.minimize),
         ),
         IconButton(
           onPressed: () async {
@@ -49,21 +48,14 @@ class WindowIcons extends StatelessWidget {
               windowManager.setFullScreen(true);
             }
           },
-          icon: Icon(
-            Icons.fullscreen_rounded,
-            color: color,
-          ),
+          icon: Icon(Icons.fullscreen_rounded),
         ),
         IconButton(
           onPressed: windowManager.close,
-          icon: Icon(
-            Icons.close_rounded,
-            color: color,
-          ),
+          icon: Icon(Icons.close_rounded),
         ),
         const SizedBox(width: 6),
       ],
     );
-    return child;
   }
 }

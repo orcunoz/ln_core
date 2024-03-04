@@ -1,16 +1,20 @@
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ln_core/ln_core.dart';
 import 'package:universal_io/io.dart';
 import 'package:universal_platform/universal_platform.dart';
-import 'package:window_manager/window_manager.dart';
 
 /// Helper class for device related operations.
 ///
-class DeviceUtils {
+final class DeviceUtils {
   static hideKeyboard(BuildContext context) {
     FocusScope.of(context).unfocus();
+  }
+
+  static showKeyboard(BuildContext context) {
+    FocusScope.of(context).requestFocus();
   }
 
   static Future<void> copyToClipboard(String text) async {
@@ -25,22 +29,15 @@ class DeviceUtils {
   static Future<String> pasteFromClipboard() => Clipboard.getData('text/plain')
       .then((data) => data?.text?.toString() ?? "");
 
-  static Future<void> clipboardCopyAndShowSnack(
-      BuildContext context, String textToCopy, String message) {
-    return copyToClipboard(textToCopy)
-        .then((value) => ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(message),
-                duration: const Duration(seconds: 1),
-              ),
-            ))
-        .onError(
-            (error, stackTrace) => ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(message),
-                    duration: const Duration(seconds: 1),
-                  ),
-                ));
+  static Future<ScaffoldFeatureController<SnackBar, SnackBarClosedReason>>
+      copyToClipboardWithSnackBar(BuildContext context, String textToCopy,
+          String snackBarMessage) async {
+    await copyToClipboard(textToCopy);
+    final snackBar = SnackBar(
+      content: Text(snackBarMessage),
+      duration: const Duration(seconds: 3),
+    );
+    return ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
   @Deprecated("Use AnnotatedRegion<SystemUiOverlayStyle> instead this")
@@ -50,17 +47,13 @@ class DeviceUtils {
         : brightness == Brightness.dark) {
       SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark.copyWith(
           statusBarColor: Colors.transparent, // Color for Android
-          statusBarBrightness:
-              Brightness.dark // Dark == white status bar -- for IOS.
-          ));
+          statusBarBrightness: Brightness.dark));
     } else if (UniversalPlatform.isAndroid
         ? brightness == Brightness.dark
         : brightness == Brightness.light) {
       SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light.copyWith(
           statusBarColor: Colors.transparent, // Color for Android
-          statusBarBrightness:
-              Brightness.light // Dark == white status bar -- for IOS.
-          ));
+          statusBarBrightness: Brightness.light));
     }
   }
 
@@ -107,7 +100,7 @@ class DeviceUtils {
   }
 }
 
-class DeviceInfo {
+final class DeviceInfo {
   static String platform = _platform();
 
   late final String? name;
@@ -135,6 +128,24 @@ class DeviceInfo {
     return "Unknown";
   }
 
+  static TargetPlatform get targetPlatform {
+    if (Platform.isAndroid) {
+      return TargetPlatform.android;
+    } else if (Platform.isIOS) {
+      return TargetPlatform.iOS;
+    } else if (Platform.isFuchsia) {
+      return TargetPlatform.fuchsia;
+    } else if (Platform.isLinux) {
+      return TargetPlatform.linux;
+    } else if (Platform.isMacOS) {
+      return TargetPlatform.macOS;
+    } else if (Platform.isWindows) {
+      return TargetPlatform.windows;
+    }
+
+    return defaultTargetPlatform;
+  }
+
   static Future<DeviceInfo> fromDevice() async {
     final DeviceInfo di = DeviceInfo._();
     final DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
@@ -150,23 +161,23 @@ class DeviceInfo {
         di.version = build.version.toString();
         di.identifier = build.id;
       } else if (UniversalPlatform.isIOS) {
-        var data = await deviceInfo.iosInfo;
+        final data = await deviceInfo.iosInfo;
         di.name = data.name;
         di.version = data.systemVersion;
         di.identifier = data.identifierForVendor;
       } else if (UniversalPlatform.isWindows) {
-        var data = await deviceInfo.windowsInfo;
+        final data = await deviceInfo.windowsInfo;
         di.name = data.computerName;
         di.version =
             "${data.displayVersion} ${data.majorVersion}.${data.minorVersion} ${data.csdVersion}";
         di.identifier = data.deviceId;
       } else if (UniversalPlatform.isMacOS) {
-        var data = await deviceInfo.macOsInfo;
+        final data = await deviceInfo.macOsInfo;
         di.name = data.computerName;
         di.version = "${data.osRelease} ${data.model} ${data.kernelVersion}";
         di.identifier = data.systemGUID;
       } else if (UniversalPlatform.isLinux) {
-        var data = await deviceInfo.linuxInfo;
+        final data = await deviceInfo.linuxInfo;
         di.name = data.name;
         di.version = "${data.versionCodename} ${data.version}";
         di.identifier = data.machineId;

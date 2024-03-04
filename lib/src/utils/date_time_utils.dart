@@ -53,7 +53,7 @@ extension TimeOfDayExtensions on TimeOfDay {
   DateTime withDate(DateTime date) => date.withTime(this);
 }
 
-class ContexedDateTime {
+final class ContexedDateTime {
   final BuildContext context;
   final DateTime date;
 

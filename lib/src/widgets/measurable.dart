@@ -1,37 +1,61 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:ln_core/ln_core.dart';
+
+class MeasurableBuilder extends StatefulWidget {
+  const MeasurableBuilder({super.key, required this.builder});
+
+  final Widget Function(BuildContext context, Size? size) builder;
+
+  @override
+  State<MeasurableBuilder> createState() => _MeasurableBuilderState();
+}
+
+class _MeasurableBuilderState extends State<MeasurableBuilder> {
+  Size? size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Measurable(
+      computedSize: size,
+      onLayout: (size) {
+        if (this.size != size) {
+          LnSchedulerCallbacks.endOfFrame(() => setState(() {
+                this.size = size;
+              }));
+        }
+      },
+      child: widget.builder(context, size),
+    );
+  }
+}
 
 class Measurable extends SingleChildRenderObjectWidget {
   const Measurable({
     super.key,
-    this.onLayout,
-    this.afterLayout,
+    this.computedSize,
+    required this.onLayout,
     required super.child,
   });
 
-  final ValueChanged<Size>? onLayout;
-  final ValueChanged<Size>? afterLayout;
+  final Size? computedSize;
+  final ValueChanged<Size> onLayout;
 
   @override
   RenderObject createRenderObject(BuildContext context) =>
-      _MeasurableRenderObject(onLayout, afterLayout);
+      _MeasurableRenderObject((size) {
+        if (size != computedSize) onLayout(size);
+      });
 }
 
 class _MeasurableRenderObject extends RenderProxyBox {
-  _MeasurableRenderObject(this.onLayout, this.afterLayout);
+  _MeasurableRenderObject(this.onLayout);
 
-  final ValueChanged<Size>? onLayout;
-  final ValueChanged<Size>? afterLayout;
+  final ValueChanged<Size> onLayout;
 
   @override
   void performLayout() {
     super.performLayout();
-
-    if (onLayout != null) onLayout!(size);
-    if (afterLayout != null) {
-      WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-        afterLayout!(size);
-      });
-    }
+    onLayout(size);
   }
 }

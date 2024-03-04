@@ -4,31 +4,32 @@ import 'package:ln_core/ln_core.dart';
 import 'package:flutter/material.dart';
 
 class CopyableCard extends StatefulWidget {
-  final String text;
-  final String? copyMessage;
   const CopyableCard({
     super.key,
     required this.text,
     this.copyMessage,
   });
 
+  final String text;
+  final String? copyMessage;
+
   @override
   State<CopyableCard> createState() => _CopyableCardState();
 }
 
 class _CopyableCardState extends State<CopyableCard> {
-  double _scale = 0;
+  Offset _offset = Offset(1, 0);
   Timer? _resetterTimer;
 
   void _onPressCopy() async {
     await DeviceUtils.copyToClipboard(widget.text);
     setState(() {
-      _scale = 1;
+      _offset = Offset(0, 0);
     });
     _resetterTimer?.cancel();
     _resetterTimer = Timer(const Duration(seconds: 3), () {
       setState(() {
-        _scale = 0;
+        _offset = Offset(1, 0);
       });
     });
   }
@@ -36,22 +37,19 @@ class _CopyableCardState extends State<CopyableCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final borderColor = theme.primaryColor.withOpacity(0.4);
-    return SelectableCard(
-      onTap: _onPressCopy,
-      selected: false,
-      margin: EdgeInsets.zero,
-      shape: theme.cardTheme.shape?.copyWith(
-        borderSide:
-            theme.cardTheme.shape?.borderSide?.copyWith(color: borderColor),
-      ),
-      child: IntrinsicHeight(
+    final borderRadius = BorderRadius.circular(kMinInteractiveDimension / 2);
+
+    return ClipRRect(
+      borderRadius: borderRadius,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: borderRadius,
+          color: theme.inputDecorationTheme.fillColor,
+        ),
         child: Stack(
-          fit: StackFit.expand,
+          clipBehavior: Clip.none,
           children: [
             Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
                   child: Container(
@@ -63,40 +61,27 @@ class _CopyableCardState extends State<CopyableCard> {
                     ),
                   ),
                 ),
-                PrecisionVerticalDivider(color: borderColor),
-                Container(
-                  color: theme.highlightColor,
-                  padding: const EdgeInsets.all(12),
-                  alignment: Alignment.center,
-                  child: SpacedRow(
-                    spacing: 6,
-                    children: [
-                      Icon(
-                        Icons.copy,
-                        size: 18,
-                        color: theme.colorScheme.primary,
-                      ),
-                      Text(
-                        LnLocalizations.current.copy,
-                        style: TextStyle(
-                          color: theme.colorScheme.primary,
-                        ),
-                      )
-                    ],
+                Padding(
+                  padding: EdgeInsets.all(4),
+                  child: FilledButton.icon(
+                    onPressed: _onPressCopy,
+                    icon: Icon(Icons.copy, size: 20),
+                    label: Text(LnLocalizations.current.copy),
                   ),
                 ),
               ],
             ),
-            AnimatedScale(
-              scale: _scale,
-              duration: const Duration(milliseconds: 200),
-              child: Card(
-                color: theme.colorScheme.primaryContainer,
-                margin: EdgeInsets.zero,
-                child: Center(
-                  child: Text(
-                    LnLocalizations.current.linkCopiedToClipboard,
-                    style: TextStyle(color: theme.colorScheme.primary),
+            Positioned.fill(
+              child: AnimatedSlide(
+                offset: _offset,
+                duration: const Duration(milliseconds: 200),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: borderRadius,
+                    color: theme.colorScheme.primaryContainer,
+                  ),
+                  child: Center(
+                    child: Text(LnLocalizations.current.linkCopiedToClipboard),
                   ),
                 ),
               ),

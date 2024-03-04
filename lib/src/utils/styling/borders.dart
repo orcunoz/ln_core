@@ -30,9 +30,24 @@ extension InputDecorationThemeExtensions on InputDecorationTheme {
 
   InputBorder get readOnlyBorder =>
       defaultBorder?.frameless ?? InputBorder.none;
+
+  BoxDecoration get asBoxDecoration {
+    return BoxDecoration(
+      color: fillColor,
+      border:
+          Border.fromBorderSide(defaultBorder?.borderSide ?? BorderSide.none),
+      borderRadius: borderRadius,
+    );
+  }
 }
 
 extension ShapeBorderExtensions on ShapeBorder {
+  BoxBorder asBoxBorder() {
+    return Border.fromBorderSide(
+      borderSide ?? BorderSide.none,
+    );
+  }
+
   ShapeBorder? get frameless {
     if (this is InputBorder) {
       return (this as InputBorder).frameless;
@@ -70,7 +85,7 @@ extension ShapeBorderExtensions on ShapeBorder {
       return (this as OutlinedBorder).copyWith(side: borderSide);
     }
 
-    throw Exception("Unexpected ShapeBorder type!");
+    throw Exception("Unexpected ShapeBorder type($runtimeType)!");
   }
 
   ShapeBorder copyWithBorderRadius(
@@ -83,7 +98,7 @@ extension ShapeBorderExtensions on ShapeBorder {
           .copyWithBorderRadius(side: borderSide, borderRadius: borderRadius);
     }
 
-    throw Exception("Unexpected ShapeBorder type!");
+    throw Exception("Unexpected ShapeBorder type($runtimeType)!");
   }
 }
 
@@ -96,7 +111,7 @@ extension InputBorderExtensions on InputBorder {
       return (this as UnderlineInputBorder).borderRadius;
     }
 
-    throw Exception("Unexpected InputBorder type!");
+    throw Exception("Unexpected InputBorder type($runtimeType)!");
   }
 
   InputBorder copyWithBorderRadius(
@@ -109,46 +124,35 @@ extension InputBorderExtensions on InputBorder {
           .copyWith(borderSide: side, borderRadius: borderRadius);
     }
 
-    throw Exception("Unexpected InputBorder type!");
+    throw Exception("Unexpected InputBorder type($runtimeType)!");
   }
 }
 
 extension OutlinedBorderExtensions on OutlinedBorder {
   OutlinedBorder? get frameless => copyWith(side: BorderSide.none);
 
-  BorderRadiusGeometry get borderRadius {
-    switch (runtimeType) {
-      case CircleBorder:
-        return BorderRadius.circular(double.maxFinite);
-      case RoundedRectangleBorder:
-        return (this as RoundedRectangleBorder).borderRadius;
-      case ContinuousRectangleBorder:
-        return (this as ContinuousRectangleBorder).borderRadius;
-      case BeveledRectangleBorder:
-        return (this as BeveledRectangleBorder).borderRadius;
-      default:
-        throw Exception("Unexpected OutlinedBorder type!");
-    }
-  }
+  BorderRadiusGeometry get borderRadius => switch (this) {
+        CircleBorder _ ||
+        StadiumBorder _ =>
+          BorderRadius.circular(double.maxFinite),
+        RoundedRectangleBorder rounded => rounded.borderRadius,
+        ContinuousRectangleBorder continuous => continuous.borderRadius,
+        BeveledRectangleBorder beveled => beveled.borderRadius,
+        _ => BorderRadius.circular(double.maxFinite),
+      };
 
   OutlinedBorder copyWithBorderRadius(
-      {BorderSide? side, BorderRadiusGeometry? borderRadius}) {
-    switch (runtimeType) {
-      case CircleBorder:
-        return (this as CircleBorder).copyWith(side: side);
-      case RoundedRectangleBorder:
-        return (this as RoundedRectangleBorder)
-            .copyWith(side: side, borderRadius: borderRadius);
-      case ContinuousRectangleBorder:
-        return (this as ContinuousRectangleBorder)
-            .copyWith(side: side, borderRadius: borderRadius);
-      case BeveledRectangleBorder:
-        return (this as BeveledRectangleBorder)
-            .copyWith(side: side, borderRadius: borderRadius);
-      default:
-        throw Exception("Unexpected OutlinedBorder type!");
-    }
-  }
+          {BorderSide? side, BorderRadiusGeometry? borderRadius}) =>
+      switch (this) {
+        CircleBorder _ || StadiumBorder _ => copyWith(side: side),
+        RoundedRectangleBorder border =>
+          border.copyWith(side: side, borderRadius: borderRadius),
+        ContinuousRectangleBorder border =>
+          border.copyWith(side: side, borderRadius: borderRadius),
+        BeveledRectangleBorder border =>
+          border.copyWith(side: side, borderRadius: borderRadius),
+        _ => copyWith(side: side)
+      };
 }
 
 class LeftlineInputBorder extends InputBorder {
@@ -255,4 +259,17 @@ class LeftlineInputBorder extends InputBorder {
 
   @override
   int get hashCode => Object.hash(borderSide, borderRadius);
+}
+
+final class DividerBorders {
+  DividerBorders(Color color) : side = BorderSide(width: .5, color: color);
+  DividerBorders.of(BuildContext context)
+      : side = BorderSide(width: .5, color: Theme.of(context).dividerColor);
+
+  final BorderSide side;
+  Border get top => Border(top: side);
+  Border get bottom => Border(bottom: side);
+  Border get left => Border(left: side);
+  Border get right => Border(right: side);
+  Border get all => Border.fromBorderSide(side);
 }

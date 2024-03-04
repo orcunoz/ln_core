@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:ln_core/ln_core.dart';
 
 part 'sieve_target.dart';
@@ -66,16 +67,13 @@ class SieveArea extends StatefulWidget {
   State<SieveArea> createState() => _SieveAreaState();
 }
 
-class _SieveAreaState extends LnState<SieveArea> {
+class _SieveAreaState extends LnState<SieveArea> with ChangeNotifier {
   final Set<_SieveTargetRegistration> _sieveRegs = {};
-
-  int generateOrderNumber() {
-    return _sieveRegs.fold<int>(0, (max, reg) => math.max(reg.order, max)) + 1;
-  }
+  RenderObject? _ancestor;
+  RenderObject? get ancestor => _ancestor ??= context.findRenderObject();
 
   void register(_SieveTargetState state) {
     final registration = _SieveTargetRegistration(state: state);
-    final ancestor = context.findRenderObject();
     if (ancestor != null) {
       registration.replacementRect.value = _calculateReplacementRect(
         state.renderTransform,
@@ -84,13 +82,12 @@ class _SieveAreaState extends LnState<SieveArea> {
     }
 
     _sieveRegs.add(registration);
-    rebuild();
+    endOfFrame(notifyListeners);
   }
 
   void unregister(_SieveTargetState state) {
     _sieveRegs.removeWhere((reg) => reg._state == state);
-
-    rebuild(postFrameCallback: true);
+    endOfFrame(notifyListeners);
   }
 
   Rect? _calculateReplacementRect(
@@ -126,11 +123,11 @@ class _SieveAreaState extends LnState<SieveArea> {
 
   @override
   Widget build(BuildContext context) {
+    _ancestor = null;
     return _SieveAreaScope(
       state: this,
       child: NotificationListener(
         onNotification: (ScrollUpdateNotification scrollNotification) {
-          var ancestor = context.findRenderObject();
           for (var reg in _sieveRegs) {
             reg.replacementRect.value = _calculateReplacementRect(
               reg._state.renderTransform,
@@ -140,26 +137,28 @@ class _SieveAreaState extends LnState<SieveArea> {
 
           return true;
         },
-        child: Stack(
-          children: [
-            widget.child,
-            for (var reg
-                in _sieveRegs.toList()..sort((r1, r2) => r1.order - r2.order))
-              ValueListenableBuilder(
-                valueListenable: reg.replacementRect,
-                builder: (BuildContext context, Rect? rect, Widget? child) =>
-                    rect == null
-                        ? SizedBox.shrink()
-                        : Positioned(
-                            left: rect.left,
-                            top: rect.top,
-                            width: rect.width,
-                            height: rect.height,
-                            child: child!,
-                          ),
-                child: reg._state.widget.child,
-              ),
-          ],
+        child: ListenableBuilder(
+          listenable: this,
+          builder: (context, child) => Stack(
+            children: [
+              widget.child,
+              for (var reg in _sieveRegs)
+                ValueListenableBuilder(
+                  valueListenable: reg.replacementRect,
+                  builder: (context, rect, child) => Visibility(
+                    visible: rect != null,
+                    child: Positioned(
+                      left: rect?.left,
+                      top: rect?.top,
+                      width: rect?.width,
+                      height: rect?.height,
+                      child: child!,
+                    ),
+                  ),
+                  child: reg._state.widget.child,
+                ),
+            ],
+          ),
         ),
       ),
     );

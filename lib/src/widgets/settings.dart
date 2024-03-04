@@ -1,76 +1,77 @@
 import 'package:flutter/material.dart';
 import 'package:ln_core/ln_core.dart';
 
-class SettingsGroup extends StatelessWidget {
-  final String? title;
-  final List<SettingsRow> rows;
-  final EdgeInsets rowPadding;
+const kRowPadding = const EdgeInsets.all(16);
 
+class SettingsGroup extends StatelessWidget {
   const SettingsGroup({
     super.key,
     this.title,
     required this.rows,
-    this.rowPadding = const EdgeInsets.all(16),
+    this.elevation = 1,
   });
+
+  final String? title;
+  final List<Widget> rows;
+  final double elevation;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (title != null)
-          Padding(
-            padding: EdgeInsets.only(
-              left: rowPadding.left,
-              bottom: 4,
+    final borderRadius = theme.cardTheme.shape?.borderRadius
+            ?.resolve(Directionality.of(context)) ??
+        BorderRadius.circular(4);
+    Widget result = LnSurface(
+      LnSurfaceDecoration(Surfaces.brightest),
+      child: Padding(
+        padding: const EdgeInsets.all(6.0),
+        child: SeparatedColumn(
+          separator: PrecisionDivider(
+            indent: borderRadius.topLeft.x,
+            endIndent: borderRadius.topRight.x,
+            color: theme.borderColor(
+              theme.tonalScheme.surfaceBrightest,
+              sharpness: 4,
             ),
-            child: Text(
-              title!,
-              style: theme.textTheme.labelMedium!.copyWith(
-                color: theme.primaryColor,
-                fontWeight: FontWeight.w600,
+          ),
+          children: rows,
+        ),
+      ),
+    );
+
+    if (title != null) {
+      result = Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (title != null)
+            Padding(
+              padding: kRowPadding.copyWith(top: 0, bottom: 0) +
+                  const EdgeInsets.only(bottom: 4),
+              child: Text(
+                title!,
+                style: theme.textTheme.labelLarge!.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ),
-        Card(
-          margin: EdgeInsets.zero,
-          child: SeparatedColumn(
-            separator: const Divider(height: .5, thickness: .5),
-            children: [
-              for (var row in rows)
-                InkWell(
-                  onTap: row.onPressed == null
-                      ? null
-                      : () => row.onPressed!(context),
-                  child: Padding(
-                    padding: rowPadding,
-                    child: row,
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ],
-    );
+          Flexible(child: result),
+        ],
+      );
+    }
+
+    return result;
   }
 }
 
 class SettingsRow extends StatelessWidget {
-  final String titleText;
-  final IconData leadingIcon;
-  final String? trailingText;
-  final Widget? trailing;
-  final IconData? trailingIcon;
-  final Function(BuildContext)? onPressed;
-
   const SettingsRow({
     super.key,
     required this.titleText,
     required this.leadingIcon,
     this.trailingText,
     this.trailing,
-    //super.description,
     this.onPressed,
     this.trailingIcon,
   }) : assert(trailing == null || trailingText == null);
@@ -81,40 +82,56 @@ class SettingsRow extends StatelessWidget {
     required this.leadingIcon,
     this.trailingText,
     this.trailing,
-    //super.description,
     this.onPressed,
   })  : trailingIcon = Icons.keyboard_arrow_right_rounded,
         assert(trailing == null || trailingText == null);
 
+  final String titleText;
+  final IconData leadingIcon;
+  final String? trailingText;
+  final Widget? trailing;
+  final IconData? trailingIcon;
+  final Function()? onPressed;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Row(
-      children: [
-        IconTheme(
-          data: IconThemeData(color: theme.hintColor, size: 22),
-          child: Icon(leadingIcon),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: DefaultTextStyle(
-            style: theme.textTheme.bodyMedium ?? const TextStyle(),
-            child: Text(titleText),
+    final borderRadius = theme.cardTheme.shape?.borderRadius
+            ?.resolve(Directionality.of(context)) ??
+        BorderRadius.circular(4);
+
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: borderRadius,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: kMinInteractiveDimension),
+        child: Padding(
+          padding: kRowPadding,
+          child: Row(
+            children: [
+              Icon(leadingIcon,
+                  color: theme.colorScheme.onSurfaceVariant, size: 22),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  titleText,
+                  style: theme.textTheme.bodyMedium?.apply(fontSizeFactor: 1.1),
+                ),
+              ),
+              if (trailing != null || trailingText != null)
+                DefaultTextStyle(
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant) ??
+                      const TextStyle(),
+                  child: trailing ?? Text(trailingText!),
+                ),
+              if (trailingIcon != null)
+                Icon(trailingIcon,
+                    color: theme.colorScheme.onSurfaceVariant, size: 22),
+            ],
           ),
         ),
-        if (trailing != null || trailingText != null)
-          DefaultTextStyle(
-            style:
-                theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor) ??
-                    const TextStyle(),
-            child: trailing ?? Text(trailingText!),
-          ),
-        if (trailingIcon != null)
-          IconTheme(
-            data: IconThemeData(color: theme.hintColor, size: 22),
-            child: Icon(trailingIcon),
-          ),
-      ],
+      ),
     );
   }
 }

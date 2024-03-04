@@ -11,8 +11,8 @@ class PrecisionDivider extends Divider {
   });
 }
 
-class PrecisionVerticalDivider extends VerticalDivider {
-  const PrecisionVerticalDivider({
+class VerticalPrecisionDivider extends VerticalDivider {
+  const VerticalPrecisionDivider({
     super.key,
     super.width = .5,
     super.thickness = .5,

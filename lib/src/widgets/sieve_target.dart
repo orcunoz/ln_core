@@ -31,15 +31,16 @@ class _SieveTargetState extends State<SieveTarget> {
   void initState() {
     super.initState();
 
-    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+    SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
       _SieveAreaScope.of(context).register(this);
     });
   }
 
   @override
-  void deactivate() {
+  void dispose() {
+    super.dispose();
+
     _SieveAreaScope.of(context).unregister(this);
-    super.deactivate();
   }
 
   @override

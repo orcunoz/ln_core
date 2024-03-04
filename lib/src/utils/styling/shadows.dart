@@ -1,35 +1,64 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 
-extension ShadowExtensions on Shadow {
-  List<BoxShadow> inList() {
-    return [asBox()];
-  }
-
-  BoxShadow asBox() {
-    return BoxShadow(
-      color: color,
-      blurRadius: blurRadius,
-      offset: offset,
-    );
-  }
+extension ShadowsExtensions on BoxShadow {
+  BoxShadow withColor(Color color) => BoxShadow(
+        color: color,
+        offset: offset,
+        blurRadius: blurRadius,
+        spreadRadius: spreadRadius,
+        blurStyle: blurStyle,
+      );
 }
 
-class ElevationShadow extends Shadow {
-  ElevationShadow(double elevation, {Color color = Colors.black})
-      : assert(elevation >= 0 && elevation <= 50),
-        super(
-          color: color.withOpacity((.25 + elevation * 0.1) * color.opacity),
-          blurRadius: (1 + (19.0 / 23.0) * (elevation - 1)),
-          offset: Offset(0, elevation * 0.75),
-        );
-}
+abstract final class Shadows {
+  static List<BoxShadow> _scaleList(List<BoxShadow> shadows, double factor) {
+    return [
+      for (var shadow in shadows) shadow.scale(factor),
+    ];
+  }
 
-class ElevationBoxShadow extends BoxShadow {
-  ElevationBoxShadow(double elevation, {Color color = Colors.black})
-      : assert(elevation >= 0 && elevation <= 50),
-        super(
-          color: color.withOpacity(.25 + elevation * 0.1),
-          blurRadius: (1 + (19.0 / 23.0) * (elevation - 1)),
-          offset: Offset(0, elevation * 0.75),
-        );
+  static List<BoxShadow> of(
+    double elevation, {
+    Color color = Colors.black,
+    bool shine = false,
+  }) {
+    assert(color.opacity == 1);
+    assert(elevation >= 0);
+    List<BoxShadow> shadows;
+    if (elevation == 0) {
+      return [];
+    } else if (elevation < 1) {
+      shadows = BoxShadow.lerpList([], kElevationToShadow[1]!, elevation)!;
+    } else {
+      final floor = kElevationToShadow.keys.lastWhere((e) => e <= elevation);
+      List<BoxShadow> floorList = kElevationToShadow[floor]!;
+
+      if (floor == elevation) {
+        shadows = floorList;
+      } else {
+        final ceil =
+            kElevationToShadow.keys.firstWhereOrNull((e) => e >= elevation);
+        if (ceil == null) {
+          shadows = _scaleList(floorList, elevation / floor);
+        } else {
+          List<BoxShadow> ceilList = kElevationToShadow[ceil]!;
+          double t = (elevation - floor) / (ceil - floor);
+          shadows = BoxShadow.lerpList(floorList, ceilList, t)!;
+        }
+      }
+    }
+
+    final multiplier = shine ? 4 : 1;
+    return [
+      for (var shadow in shadows)
+        BoxShadow(
+          color: color.withOpacity(shadow.color.opacity * multiplier),
+          offset: shadow.offset,
+          blurRadius: shadow.blurRadius,
+          spreadRadius: shadow.spreadRadius,
+          blurStyle: shadow.blurStyle,
+        ),
+    ];
+  }
 }

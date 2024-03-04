@@ -41,4 +41,7 @@ class LocaleTr implements LnLocalizations {
 
   @override
   String get unauthorizedAccess => "Yetkisiz erişim denemesi!";
+
+  @override
+  String get refresh => "Yenile";
 }

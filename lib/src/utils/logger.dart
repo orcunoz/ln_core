@@ -11,28 +11,28 @@ final Logger _coloredLogger = Logger(
     printer: HybridPrinter(LnPrinter(color: AnsiColor.fg(33)), error: null));
 
 class Log {
-  static i(dynamic message) {
+  static void i(dynamic message) {
     _logger.i(_messageWithTime(message));
   }
 
-  static e(dynamic errorOrMessage, {StackTrace? stackTrace}) {
+  static void e(dynamic errorOrMessage, {StackTrace? stackTrace}) {
     Error? error = errorOrMessage is Error ? errorOrMessage : null;
 
     if (stackTrace != null) {
-      _logger.e(errorOrMessage, errorOrMessage, stackTrace);
+      _logger.e(errorOrMessage, error: errorOrMessage, stackTrace: stackTrace);
     }
-    _logger.e(errorOrMessage, error);
+    _logger.e(errorOrMessage, error: error);
   }
 
-  static wtf(dynamic message) {
-    _logger.wtf(_messageWithTime(message.toString()));
+  static void fatal(dynamic message) {
+    _logger.f(_messageWithTime(message));
   }
 
-  static colored(String part1, String part2) {
+  static void colored(String part1, String part2) {
     _coloredLogger.d("$part1.$part2");
   }
 
-  static String _messageWithTime(String message) {
+  static String _messageWithTime(dynamic message) {
     return "${DateTime.now().toTimeString()}: $message";
   }
 }

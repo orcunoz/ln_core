@@ -30,9 +30,9 @@ class DynamicCallHandler2<T extends Function> {
     return onCall(
       invocation.positionalArguments,
       invocation.namedArguments.map(
-        (_k, v) {
-          var k = _k.toString();
-          return MapEntry(k.substring(_offset, k.length - 2), v);
+        (k, v) {
+          var sk = k.toString();
+          return MapEntry(sk.substring(_offset, sk.length - 2), v);
         },
       ),
     );

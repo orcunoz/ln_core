@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class CleanAreaAndDarkenedOutside extends StatelessWidget {
+  CleanAreaAndDarkenedOutside({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -11,7 +13,9 @@ class CleanAreaAndDarkenedOutside extends StatelessWidget {
   //CustomPainter that helps us in doing this
   CustomPaint _getCustomPaintOverlay(BuildContext context) {
     return CustomPaint(
-        size: MediaQuery.of(context).size, painter: RectanglePainter());
+      size: MediaQuery.of(context).size,
+      painter: RectanglePainter(),
+    );
   }
 }
 

@@ -20,7 +20,7 @@ class ProgressIndicatorWidget extends StatelessWidget {
     final size = this.size ?? iconTheme.size ?? 24;
     final color = this.color ??
         iconTheme.color ??
-        Theme.of(context).colorScheme.onBackground;
+        Theme.of(context).colorScheme.onSurface;
 
     return progress
         ? Container(

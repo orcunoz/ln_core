@@ -1,14 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:ln_core/ln_core.dart';
 
 class HighlightedText extends StatelessWidget {
-  final String text;
-  final String? highlightedText;
-  final TextStyle? style;
-  final TextStyle? highlightStyle;
-  final Color? highlightColor;
-  final Color? highlightBackColor;
-  final bool ignoreCase;
-
   const HighlightedText(
     this.text, {
     super.key,
@@ -16,53 +9,44 @@ class HighlightedText extends StatelessWidget {
     this.style,
     this.highlightColor,
     this.highlightBackColor,
-    this.highlightStyle,
-    this.ignoreCase = true,
+    this.ignoreCase = false,
   });
+
+  final String text;
+  final String? highlightedText;
+  final TextStyle? style;
+  final Color? highlightColor;
+  final Color? highlightBackColor;
+  final bool ignoreCase;
 
   @override
   Widget build(BuildContext context) {
-    TextStyle nnTextStyle = style ?? DefaultTextStyle.of(context).style;
-    TextStyle nnHighlightStyle = highlightStyle ??
-        nnTextStyle.copyWith(
-          color: highlightColor ?? Theme.of(context).primaryColor,
-          backgroundColor:
-              highlightBackColor ?? Theme.of(context).highlightColor,
-        );
+    TextStyle style = this.style ?? DefaultTextStyle.of(context).style;
+    TextSpan result;
 
-    InlineSpan highlightedSpan(String content) {
-      return TextSpan(text: content, style: nnHighlightStyle);
-    }
-
-    InlineSpan normalSpan(String content) {
-      return TextSpan(text: content, style: nnTextStyle);
-    }
-
-    final text = this.text;
     if (highlightedText == null || highlightedText!.isEmpty || text.isEmpty) {
-      return Text(text, style: nnTextStyle);
+      result = TextSpan(text: text, style: style);
+    } else {
+      ThemeData? themeData;
+      ThemeData theme() => themeData ??= Theme.of(context);
+
+      TextStyle highlightStyle = style.copyWith(
+        color: highlightColor ?? theme().colorScheme.onPrimaryContainer,
+        backgroundColor:
+            highlightBackColor ?? theme().colorScheme.primaryContainer,
+        fontWeight: FontWeight.bold,
+      );
+
+      final parts = RegExpUtilities.splitByPart(text, part: highlightedText!);
+      result = TextSpan(children: [
+        for (var part in parts)
+          TextSpan(
+            text: part.text,
+            style: part.matched ? highlightStyle : style,
+          ),
+      ]);
     }
 
-    var sourceText = ignoreCase ? text.toLowerCase() : text;
-    var targetHighlight =
-        ignoreCase ? highlightedText!.toLowerCase() : highlightedText!;
-
-    List<InlineSpan> spans = [];
-    int start = 0;
-    int indexOfHighlight;
-    do {
-      indexOfHighlight = sourceText.indexOf(targetHighlight, start);
-      if (indexOfHighlight < 0) {
-        spans.add(normalSpan(text.substring(start)));
-        break;
-      }
-      if (indexOfHighlight > start) {
-        spans.add(normalSpan(text.substring(start, indexOfHighlight)));
-      }
-      start = indexOfHighlight + targetHighlight.length;
-      spans.add(highlightedSpan(text.substring(indexOfHighlight, start)));
-    } while (true);
-
-    return Text.rich(TextSpan(children: spans));
+    return Text.rich(result);
   }
 }

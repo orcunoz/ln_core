@@ -5,12 +5,14 @@ import "package:stack_trace/stack_trace.dart";
 import "dynamic_function.dart";
 
 extension ThrottleDebounceFunctionExtensions<T extends Function> on T {
-  dynamic get throttled => DynamicCallHandler<T>((args, [kwargs]) {
+  DynamicCallHandler<T> get throttled =>
+      DynamicCallHandler<T>((args, [kwargs]) {
         throttle(() => Function.apply(this, args, kwargs),
             unique: Trace.current(1).frames[0].location);
       });
 
-  dynamic get debounced => DynamicCallHandler<T>((args, [kwargs]) {
+  DynamicCallHandler<T> get debounced =>
+      DynamicCallHandler<T>((args, [kwargs]) {
         debounce(() => Function.apply(this, args, kwargs),
             unique: Trace.current(1).frames[0].location);
       });

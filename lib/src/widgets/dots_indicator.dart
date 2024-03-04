@@ -104,7 +104,7 @@ class DotsIndicator extends StatelessWidget {
         color: Color.lerp(
           activeColors.elementAtOrNull(index) ??
               activeColor ??
-              Theme.of(context).primaryColor,
+              Theme.of(context).colorScheme.primary,
           colors.elementAtOrNull(index) ?? color,
           lerpValue,
         ),
