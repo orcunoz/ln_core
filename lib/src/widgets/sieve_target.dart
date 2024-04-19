@@ -38,9 +38,8 @@ class _SieveTargetState extends State<SieveTarget> {
 
   @override
   void dispose() {
-    super.dispose();
-
     _SieveAreaScope.of(context).unregister(this);
+    super.dispose();
   }
 
   @override

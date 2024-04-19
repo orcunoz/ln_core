@@ -4,7 +4,7 @@ import 'package:window_manager/window_manager.dart';
 const double kMinimumWindowWidth = 350;
 const double kMinimumWindowHeight = 500;
 
-const double kInitialWindowWidth = 1240;
+const double kInitialWindowWidth = 1440;
 const double kInitialWindowHeight = 800;
 
 Offset? _lastSavedPosition;

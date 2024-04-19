@@ -7,6 +7,9 @@ class HighlightedText extends StatelessWidget {
     super.key,
     required this.highlightedText,
     this.style,
+    this.textAlign,
+    this.overflow,
+    this.maxLines,
     this.highlightColor,
     this.highlightBackColor,
     this.ignoreCase = false,
@@ -15,6 +18,9 @@ class HighlightedText extends StatelessWidget {
   final String text;
   final String? highlightedText;
   final TextStyle? style;
+  final TextAlign? textAlign;
+  final TextOverflow? overflow;
+  final int? maxLines;
   final Color? highlightColor;
   final Color? highlightBackColor;
   final bool ignoreCase;
@@ -47,6 +53,11 @@ class HighlightedText extends StatelessWidget {
       ]);
     }
 
-    return Text.rich(result);
+    return Text.rich(
+      result,
+      textAlign: textAlign,
+      overflow: overflow,
+      maxLines: maxLines,
+    );
   }
 }

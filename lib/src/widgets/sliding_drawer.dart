@@ -1,24 +1,24 @@
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ln_core/ln_core.dart';
 
 import 'dart:math' as math;
 
-const _kSlideAnimationDuration = Duration(milliseconds: 500);
+const kSlidingDrawersAnimationDuration = Duration(milliseconds: 300);
 
 typedef SlideTransitionBuilder = Widget Function(
     BuildContext context, SlidingDrawerPosition position, Widget child);
 
 class LimitedRange {
   const LimitedRange({this.min, this.max})
-      : assert(min == null || max == null || min <= max);
+      : assert(min == null || max == null || min <= max,
+            "min <= max': is not true ($min <= $max)");
+
+  const LimitedRange.constant(num value) : this(min: value, max: value);
 
   final num? min;
   final num? max;
-
-  const LimitedRange.constant(num value) : this(min: value, max: value);
 
   @override
   String toString() => "$min < limits < $max";
@@ -39,34 +39,33 @@ class LimitedRange {
       );
 
   static LimitedRange? lerp(LimitedRange? a, LimitedRange? b, double t) {
-    if (t <= 0) {
-      return a;
-    } else if (t >= 1) {
-      return b;
-    } else if (b == null) {
-      if (a == null) {
-        return null;
-      } else {
-        return a * (1.0 - t);
-      }
+    if (t <= 0 || t >= 1 || a == null || b == null) {
+      return t >= .5 ? b : a;
     } else {
-      if (a == null) {
-        return b * t;
-      } else {
-        return LimitedRange(
-          min: lerpDouble(a.min, b.min, t),
-          max: lerpDouble(a.max, b.max, t),
-        );
-      }
+      return LimitedRange(
+        min: a.min == null || b.min == null
+            ? (t >= .5 ? b.min : a.min)
+            : lerpDouble(a.min, b.min, t)!,
+        max: a.max == null || b.max == null
+            ? (t >= .5 ? b.max : a.max)
+            : lerpDouble(a.max, b.max, t)!,
+      );
     }
   }
+}
+
+class LimitedRangeTween extends Tween<LimitedRange> {
+  LimitedRangeTween({super.begin, super.end});
+
+  /// Returns the value this variable has at the given animation clock value.
+  @override
+  LimitedRange lerp(double t) => LimitedRange.lerp(begin, end, t)!;
 }
 
 class ReverseSlidingDrawer extends SlidingDrawer {
   ReverseSlidingDrawer({
     super.key,
     required this.reverseOf,
-    super.onScrollableBounds = true,
     super.frameBuilder,
     required super.child,
   }) : super._reverse();
@@ -81,11 +80,12 @@ class SlidingDrawer extends StatefulWidget {
   SlidingDrawer({
     super.key,
     this.pinnedOffset,
+    this.snap = true,
     this.slideLimits,
     this.heightLimits,
     int slidePriority = 1,
     required this.slideDirection,
-    this.onScrollableBounds = true,
+    this.onScrollableBounds = false,
     this.frameBuilder,
     this.child,
   }) : slidePriority = pinnedOffset != null
@@ -96,16 +96,18 @@ class SlidingDrawer extends StatefulWidget {
 
   SlidingDrawer._reverse({
     super.key,
-    this.onScrollableBounds = true,
     this.frameBuilder,
     this.child,
-  })  : slideDirection = null,
+  })  : snap = false,
+        onScrollableBounds = false,
+        slideDirection = null,
         pinnedOffset = null,
         heightLimits = null,
         slideLimits = null,
         slidePriority = 1;
 
   final bool onScrollableBounds;
+  final bool snap;
   final double? pinnedOffset;
   final LimitedRange? slideLimits;
   final LimitedRange? heightLimits;
@@ -119,8 +121,8 @@ class SlidingDrawer extends StatefulWidget {
 }
 
 abstract class SlidingDrawerState extends LnState<SlidingDrawer>
-    implements SlidingDrawerActions, ValueListenable<SlidingDrawerPosition> {
-  double relativeScrollOffset = 0;
+    implements SlidingDrawerActions {
+  double slideRelativeOffset = 0;
   bool get isReverse => this is _ReverseSlidingDrawerState;
 
   int get priority => widget.slidePriority;
@@ -128,6 +130,7 @@ abstract class SlidingDrawerState extends LnState<SlidingDrawer>
 
   final _positionNotifier = ValueNotifier<SlidingDrawerPosition>(
       SlidingDrawerPosition(visibleHeight: 0));
+  Listenable get listenable => _positionNotifier;
 
   SlidingDrawerPosition get position => _positionNotifier.value;
   set position(SlidingDrawerPosition value) => _positionNotifier.value = value;
@@ -138,7 +141,7 @@ abstract class SlidingDrawerState extends LnState<SlidingDrawer>
     bool? slidingToForward,
     bool? atStart,
   }) {
-    _positionNotifier.value = _positionNotifier.value.copyWith(
+    position = position.copyWith(
       bounds: bounds,
       visibleHeight: visibleHeight,
       slidingToForward: slidingToForward,
@@ -154,19 +157,6 @@ abstract class SlidingDrawerState extends LnState<SlidingDrawer>
   SlidingDrawerBounds? _calculateBounds(double? measuredHeight);
 
   void setSlidePosition({double? slide, double? height, double? transition});
-
-  @override
-  void addListener(VoidCallback listener) {
-    _positionNotifier.addListener(listener);
-  }
-
-  @override
-  void removeListener(VoidCallback listener) {
-    _positionNotifier.removeListener(listener);
-  }
-
-  @override
-  SlidingDrawerPosition get value => _positionNotifier.value;
 
   void _recalculateBounds() {
     final previousSlide = position.slideAmount;
@@ -196,7 +186,7 @@ abstract class SlidingDrawerState extends LnState<SlidingDrawer>
       final previousSlide = position.slideAmount;
 
       final double newSlide = widget.pinnedOffset != null
-          ? (offset - relativeScrollOffset).clamp(0, double.infinity)
+          ? (offset - slideRelativeOffset).clamp(0, double.infinity)
           : previousSlide + change * sign;
 
       setPosition(
@@ -204,6 +194,7 @@ abstract class SlidingDrawerState extends LnState<SlidingDrawer>
         slidingToForward: slidingToForward,
         visibleHeight: position.bounds?.normalizedHeightOf(slide: newSlide),
       );
+
       return (position.slideAmount - previousSlide) * sign;
     }
   }
@@ -252,10 +243,11 @@ abstract class SlidingDrawerState extends LnState<SlidingDrawer>
 
   @override
   void dispose() {
-    super.dispose();
+    _positionNotifier.dispose();
 
     _area?.unregister(this);
     _area = null;
+    super.dispose();
   }
 
   Widget _buildChild() {
@@ -284,11 +276,12 @@ abstract class SlidingDrawerState extends LnState<SlidingDrawer>
   Widget build(BuildContext context) {
     return ClipRRect(
       child: ListenableBuilder(
-        listenable: this,
+        listenable: listenable,
         builder: (context, child) {
           return SizedBox(
             height: position.visibleHeight,
-            child: widget.frameBuilder?.call(context, value, child!) ?? child!,
+            child:
+                widget.frameBuilder?.call(context, position, child!) ?? child!,
           );
         },
         child: _buildChild(),
@@ -297,12 +290,12 @@ abstract class SlidingDrawerState extends LnState<SlidingDrawer>
   }
 
   @override
-  void close({Duration? duration = _kSlideAnimationDuration}) {
+  void close({Duration? duration = kSlidingDrawersAnimationDuration}) {
     slideTo(double.infinity, duration: duration);
   }
 
   @override
-  void open({Duration? duration = _kSlideAnimationDuration}) {
+  void open({Duration? duration = kSlidingDrawersAnimationDuration}) {
     slideTo(0, duration: duration);
   }
 }
@@ -328,12 +321,12 @@ class _ReverseSlidingDrawerState extends SlidingDrawerState {
   }
 
   void _syncReverseDrawer(SlidingDrawerState reverseDrawer) {
-    reverseDrawer.addListener(_handleReverseSlide);
+    reverseDrawer.listenable.addListener(_handleReverseSlide);
     _recalculateBounds();
   }
 
   void _unsyncReverseDrawer(SlidingDrawerState reverseDrawer) {
-    reverseDrawer.addListener(_handleReverseSlide);
+    reverseDrawer.listenable.addListener(_handleReverseSlide);
     _recalculateBounds();
   }
 
@@ -393,19 +386,14 @@ class _ReverseSlidingDrawerState extends SlidingDrawerState {
 
   @override
   void dispose() {
-    super.dispose();
-
     _unsyncReverseDrawer(reverseController);
+    super.dispose();
   }
 }
 
 class _SlidingDrawerState extends SlidingDrawerState
-    with SingleTickerProviderStateMixin<SlidingDrawer>, SlidingDrawerActions {
-  AnimationController? __animationController;
-  AnimationController get _animationController =>
-      __animationController ??= AnimationController(
-        vsync: this,
-      );
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _animationController;
   Animation<double>? _slideAnimation;
 
   @override
@@ -423,6 +411,21 @@ class _SlidingDrawerState extends SlidingDrawerState
         ..duration = duration
         ..forward(from: 0);
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      value: 0,
+    );
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   @override
@@ -486,10 +489,10 @@ class _SlidingDrawerState extends SlidingDrawerState
   }
 }
 
-mixin SlidingDrawerActions {
-  void open({Duration? duration = _kSlideAnimationDuration});
+abstract class SlidingDrawerActions {
+  void open({Duration? duration = kSlidingDrawersAnimationDuration});
 
-  void close({Duration? duration = _kSlideAnimationDuration});
+  void close({Duration? duration = kSlidingDrawersAnimationDuration});
 
   void slideTo(double value, {Duration? duration});
 }

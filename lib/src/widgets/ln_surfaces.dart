@@ -10,9 +10,23 @@ class LnSurfacesTheme extends ThemeExtension<LnSurfacesTheme> {
     this.elevation = 0,
     this.margin = EdgeInsets.zero,
     this.clipBehavior = Clip.antiAlias,
+    required this.surfaceColor,
+    required this.frontSurfaceColor,
+    required this.containerColor,
+    required this.deepContainerColor,
   });
 
-  static const _default = LnSurfacesTheme();
+  static LnSurfacesTheme _defaultsOf(ThemeData t) => LnSurfacesTheme(
+        surfaceColor: t.tonalScheme.surfaceBright,
+        frontSurfaceColor: t.tonalScheme.surfaceBrightest,
+        containerColor: t.tonalScheme.surfaceContainer,
+        deepContainerColor: t.tonalScheme.surfaceDim,
+      );
+
+  final Color deepContainerColor;
+  final Color containerColor;
+  final Color surfaceColor;
+  final Color frontSurfaceColor;
 
   final BorderRadius borderRadius;
   final BorderSide? borderSide;
@@ -22,6 +36,10 @@ class LnSurfacesTheme extends ThemeExtension<LnSurfacesTheme> {
 
   @override
   ThemeExtension<LnSurfacesTheme> copyWith({
+    Color? surfaceColor,
+    Color? frontSurfaceColor,
+    Color? containerColor,
+    Color? deepContainerColor,
     BorderRadius? borderRadius,
     BorderSide? borderSide,
     double? elevation,
@@ -29,6 +47,10 @@ class LnSurfacesTheme extends ThemeExtension<LnSurfacesTheme> {
     Clip? clipBehavior,
   }) {
     return LnSurfacesTheme(
+      surfaceColor: surfaceColor ?? this.surfaceColor,
+      frontSurfaceColor: frontSurfaceColor ?? this.frontSurfaceColor,
+      containerColor: containerColor ?? this.containerColor,
+      deepContainerColor: deepContainerColor ?? this.deepContainerColor,
       borderRadius: borderRadius ?? this.borderRadius,
       borderSide: borderSide ?? this.borderSide,
       elevation: elevation ?? this.elevation,
@@ -42,6 +64,12 @@ class LnSurfacesTheme extends ThemeExtension<LnSurfacesTheme> {
       covariant LnSurfacesTheme? other, double t) {
     if (other == null) return this;
     return LnSurfacesTheme(
+      surfaceColor: Color.lerp(surfaceColor, other.surfaceColor, t)!,
+      frontSurfaceColor:
+          Color.lerp(frontSurfaceColor, other.frontSurfaceColor, t)!,
+      containerColor: Color.lerp(containerColor, other.containerColor, t)!,
+      deepContainerColor:
+          Color.lerp(deepContainerColor, other.deepContainerColor, t)!,
       borderSide: BorderSide.lerp(borderSide ?? BorderSide.none,
           other.borderSide ?? BorderSide.none, t),
       borderRadius: BorderRadius.lerp(borderRadius, other.borderRadius, t)!,
@@ -54,7 +82,21 @@ class LnSurfacesTheme extends ThemeExtension<LnSurfacesTheme> {
 
 extension LnSurfacesThemeExtension on ThemeData {
   LnSurfacesTheme get surfaces {
-    return extension<LnSurfacesTheme>() ?? LnSurfacesTheme._default;
+    return extension<LnSurfacesTheme>() ?? LnSurfacesTheme._defaultsOf(this);
+  }
+
+  BorderSide? surfaceBorderSide(
+    Color surfaceColor, {
+    Color? outside,
+    num sharpness = 1.0,
+  }) {
+    return surfaces.borderSide?.copyWith(
+      color: borderColor(
+        surfaceColor,
+        outside: outside,
+        sharpness: sharpness,
+      ),
+    );
   }
 }
 
@@ -89,9 +131,7 @@ enum Corner {
   bottomLeft;
 }
 
-typedef TonalColorResolver = Color Function(TonalScheme);
-
-class SurfaceColorGetters {}
+typedef TonalColorResolver = Color Function(ThemeData);
 
 enum Surfaces {
   normal(_normal),
@@ -107,52 +147,63 @@ enum Surfaces {
   containerLow(_containerLow),
   containerLowest(_containerLowest);
 
-  const Surfaces(this.resolver);
+  const Surfaces(this.resolve);
 
-  final TonalColorResolver resolver;
+  final TonalColorResolver resolve;
 
-  static Color _normal(TonalScheme s) => s.surface;
-  static Color _dimmest(TonalScheme s) => s.surfaceDimmest;
-  static Color _dim(TonalScheme s) => s.surfaceDim;
-  static Color _middle(TonalScheme s) => s.surfaceMid;
-  static Color _lessBright(TonalScheme s) => s.surfaceLessBright;
-  static Color _bright(TonalScheme s) => s.surfaceBright;
-  static Color _brightest(TonalScheme s) => s.surfaceBrightest;
-  static Color _containerHighest(TonalScheme s) => s.surfaceContainerHighest;
-  static Color _containerHigh(TonalScheme s) => s.surfaceContainerHigh;
-  static Color _container(TonalScheme s) => s.surfaceContainer;
-  static Color _containerLow(TonalScheme s) => s.surfaceContainerLow;
-  static Color _containerLowest(TonalScheme s) => s.surfaceContainerLowest;
+  static Color _normal(ThemeData t) => t.tonalScheme.surface;
+  static Color _dimmest(ThemeData t) => t.tonalScheme.surfaceDimmest;
+  static Color _dim(ThemeData t) => t.tonalScheme.surfaceDim;
+  static Color _middle(ThemeData t) => t.tonalScheme.surfaceMid;
+  static Color _lessBright(ThemeData t) => t.tonalScheme.surfaceLessBright;
+  static Color _bright(ThemeData t) => t.tonalScheme.surfaceBright;
+  static Color _brightest(ThemeData t) => t.tonalScheme.surfaceBrightest;
+  static Color _containerHighest(ThemeData t) =>
+      t.tonalScheme.surfaceContainerHighest;
+  static Color _containerHigh(ThemeData t) =>
+      t.tonalScheme.surfaceContainerHigh;
+  static Color _container(ThemeData t) => t.tonalScheme.surfaceContainer;
+  static Color _containerLow(ThemeData t) => t.tonalScheme.surfaceContainerLow;
+  static Color _containerLowest(ThemeData t) =>
+      t.tonalScheme.surfaceContainerLowest;
 }
 
 class LnSurfaceDecoration {
-  LnSurfaceDecoration(
-    Surfaces surface, {
-    this.elevation,
-    this.borderRadius,
-    this.borderSide,
-  }) : resolve = surface.resolver;
+  LnSurfaceDecoration({
+    Surfaces? surface,
+    Color? color,
+    BorderRadius? borderRadius,
+    BorderSide? borderSide,
+    double? elevation,
+  }) : this._(
+          surface: surface,
+          color: color,
+          borderRadius: borderRadius,
+          borderSide: borderSide,
+          elevation: elevation,
+        );
 
-  LnSurfaceDecoration.frameless(
-    Surfaces surface, {
-    this.borderRadius,
-  })  : resolve = surface.resolver,
-        borderSide = BorderSide.none,
-        elevation = 0;
+  LnSurfaceDecoration.frameless({
+    Surfaces? surface,
+    Color? color,
+    BorderRadiusGeometry? borderRadius,
+  }) : this._(
+          surface: surface,
+          color: color,
+          borderRadius: borderRadius,
+          borderSide: BorderSide.none,
+          elevation: 0,
+        );
 
-  LnSurfaceDecoration.custom(
-    Color color, {
-    this.elevation,
-    this.borderRadius,
-    this.borderSide,
-  }) : resolve = ((_) => color);
-
-  LnSurfaceDecoration._resolver(
-    this.resolve, {
-    this.elevation,
-    this.borderRadius,
-    this.borderSide,
-  });
+  LnSurfaceDecoration._({
+    TonalColorResolver? resolve,
+    Surfaces? surface,
+    Color? color,
+    required this.elevation,
+    required this.borderRadius,
+    required this.borderSide,
+  })  : assert([resolve, surface, color].nonNulls.length == 1),
+        resolve = resolve ?? surface?.resolve ?? ((_) => color!);
 
   final TonalColorResolver resolve;
   final BorderRadiusGeometry? borderRadius;
@@ -161,13 +212,16 @@ class LnSurfaceDecoration {
 
   LnSurfaceDecoration copyWith({
     Surfaces? surface,
+    Color? color,
     BorderRadiusGeometry? borderRadius,
     BorderSide? borderSide,
     bool? borderOnForeground,
     double? elevation,
   }) {
-    return LnSurfaceDecoration._resolver(
-      surface?.resolver ?? resolve,
+    return LnSurfaceDecoration._(
+      resolve: surface == null || color == null ? resolve : null,
+      surface: surface,
+      color: color,
       borderRadius: borderRadius ?? this.borderRadius,
       borderSide: borderSide ?? this.borderSide,
       elevation: elevation ?? this.elevation,
@@ -175,7 +229,7 @@ class LnSurfaceDecoration {
   }
 
   static LnSurfaceDecoration? lerp(
-      LnSurfaceDecoration? a, LnSurfaceDecoration? b, double t) {
+      LnSurfaceDecoration? a, LnSurfaceDecoration? b, final double t) {
     if (identical(a, b)) {
       return a;
     }
@@ -188,8 +242,8 @@ class LnSurfaceDecoration {
     if (t == 1.0) {
       return b;
     }
-    return LnSurfaceDecoration._resolver(
-      (s) => Color.lerp(a.resolve(s), b.resolve(s), t)!,
+    return LnSurfaceDecoration._(
+      resolve: (s) => Color.lerp(a.resolve(s), b.resolve(s), t)!,
       borderRadius:
           BorderRadiusGeometry.lerp(a.borderRadius, b.borderRadius, t)!,
       borderSide: BorderSide.lerp(a.borderSide!, b.borderSide!, t),
@@ -201,7 +255,6 @@ class LnSurfaceDecoration {
 class LnSurfaceDecorationTween extends Tween<LnSurfaceDecoration> {
   LnSurfaceDecorationTween({super.begin, super.end});
 
-  /// Returns the value this variable has at the given animation clock value.
   @override
   LnSurfaceDecoration lerp(double t) =>
       LnSurfaceDecoration.lerp(begin, end, t)!;
@@ -218,13 +271,11 @@ class LnSurface extends StatelessWidget {
 
   LnSurface.clipper({
     this.margin,
-    this.clipBehavior,
+    this.clipBehavior = Clip.antiAlias,
     required this.child,
   })  : borderOnForeground = false,
-        decoration = LnSurfaceDecoration.custom(
-          Colors.transparent,
-          elevation: 0,
-          borderSide: BorderSide.none,
+        decoration = LnSurfaceDecoration.frameless(
+          color: Colors.transparent,
         );
 
   final LnSurfaceDecoration decoration;
@@ -236,7 +287,7 @@ class LnSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final surfaceColor = decoration.resolve(theme.tonalScheme);
+    final surfaceColor = decoration.resolve(theme);
     BorderSide? borderSide = decoration.borderSide ??
         theme.surfaces.borderSide?.copyWith(
           color: theme.borderColor(surfaceColor),

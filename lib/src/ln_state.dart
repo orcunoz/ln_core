@@ -8,6 +8,7 @@ import 'package:ln_core/ln_core.dart';
 abstract class LnContextDependentsGetters {
   ThemeData get theme;
   MediaQueryData get mediaQuery;
+  LayoutLevel get layoutLevel;
   FlutterView get view;
   TextDirection get textDirection;
   DividerBorders get dividerBorders;
@@ -30,6 +31,11 @@ mixin class _LnContextDependents implements LnContextDependentsGetters {
   MediaQueryData? _mediaQuery;
 
   @override
+  LayoutLevel get layoutLevel =>
+      _layoutLevel ??= theme.appLayout.levelOf(mediaQuery);
+  LayoutLevel? _layoutLevel;
+
+  @override
   FlutterView get view => _view ??= View.of(_context);
   FlutterView? _view;
 
@@ -48,6 +54,7 @@ mixin class _LnContextDependents implements LnContextDependentsGetters {
     __context = context;
     _theme = null;
     _mediaQuery = null;
+    _layoutLevel = null;
     _view = null;
     _textDirection = null;
     _dividerBorders = null;
@@ -60,6 +67,9 @@ abstract mixin class LnImmutableContextDependents
 
   @override
   ThemeData get theme => contextDependents.theme;
+
+  @override
+  LayoutLevel get layoutLevel => contextDependents.layoutLevel;
 
   @override
   MediaQueryData get mediaQuery => contextDependents.mediaQuery;

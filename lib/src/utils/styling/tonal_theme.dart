@@ -327,12 +327,18 @@ extension DynamicSchemeExtension on DynamicScheme {
   }
 }
 
+enum TonalThemeBackground {
+  grayscale,
+  normal,
+  colorful,
+}
+
 class TonalScheme with Diagnosticable implements ColorScheme {
   factory TonalScheme.fromSeed({
     required Color seedColor,
     required Brightness brightness,
     double contrastLevel = 0.0,
-    bool colorful = false,
+    TonalThemeBackground background = TonalThemeBackground.normal,
     Variant variant = Variant.vibrant,
     Map<String, int>? customColors,
   }) =>
@@ -344,7 +350,7 @@ class TonalScheme with Diagnosticable implements ColorScheme {
         seedColor: seedColor,
         contrastLevel: contrastLevel,
         variant: variant,
-        colorful: colorful,
+        background: background,
         customColors: customColors,
       );
 
@@ -352,23 +358,52 @@ class TonalScheme with Diagnosticable implements ColorScheme {
     ColorScheme colorScheme, {
     Color? seedColor,
     double contrastLevel = 0.0,
-    bool colorful = false,
+    TonalThemeBackground background = TonalThemeBackground.normal,
     Variant variant = Variant.vibrant,
     Map<String, int>? customColors,
-  }) =>
-      TonalScheme.fromColors(
-        brightness: colorScheme.brightness,
-        seedColor: seedColor ?? colorScheme.primary,
-        primary: colorScheme.primary,
-        secondary: colorScheme.secondary,
-        tertiary: colorScheme.tertiary,
-        neutral:
-            colorful ? colorScheme.secondaryContainer : colorScheme.surface,
-        neutralVariant: colorScheme.surfaceVariant,
-        variant: variant,
-        contrastLevel: contrastLevel,
-        customColors: customColors,
-      );
+  }) {
+    if (colorScheme.brightness.isLight &&
+        background == TonalThemeBackground.colorful) {
+      background = TonalThemeBackground.normal;
+    }
+
+    Color neutral, neutralVariant;
+    (neutral, neutralVariant) = switch (background) {
+      TonalThemeBackground.grayscale => () {
+          final greyPalette = _tonalPaletteOf(Colors.grey);
+          int neutralTone = colorScheme.brightness.isDark ? 6 : 98;
+          int variantTone = colorScheme.brightness.isDark ? 30 : 90;
+          return (
+            Color(greyPalette.get(neutralTone)),
+            Color(greyPalette.get(variantTone)),
+          );
+        }(),
+      TonalThemeBackground.normal => (
+          colorScheme.surface,
+          colorScheme.surfaceVariant,
+        ),
+      TonalThemeBackground.colorful => (
+          colorScheme.surface.blend(colorScheme.secondaryContainer, 30),
+          colorScheme.surfaceVariant.blend(colorScheme.secondaryContainer, 30),
+        ),
+    };
+
+    return TonalScheme.fromColors(
+      brightness: colorScheme.brightness,
+      seedColor: seedColor ?? colorScheme.primary,
+      primary: colorScheme.primary,
+      secondary: colorScheme.secondary,
+      tertiary: colorScheme.tertiary,
+      neutral: neutral,
+      neutralVariant: neutralVariant,
+      variant: variant,
+      contrastLevel: contrastLevel,
+      customColors: customColors,
+    );
+  }
+
+  static TonalPalette _tonalPaletteOf(Color color) =>
+      TonalPalette.fromHct(Hct.fromInt(color.value));
 
   factory TonalScheme.fromColors({
     required Brightness brightness,
@@ -382,19 +417,16 @@ class TonalScheme with Diagnosticable implements ColorScheme {
     double contrastLevel = 0.0,
     Map<String, int>? customColors,
   }) {
-    TonalPalette tonalPaletteOf(Color color) =>
-        TonalPalette.fromHct(Hct.fromInt(color.value));
-
     final scheme = DynamicScheme(
       sourceColorArgb: seedColor.value,
       variant: variant,
       isDark: brightness.isDark,
       contrastLevel: contrastLevel,
-      primaryPalette: tonalPaletteOf(primary),
-      secondaryPalette: tonalPaletteOf(secondary),
-      tertiaryPalette: tonalPaletteOf(tertiary),
-      neutralPalette: tonalPaletteOf(neutral),
-      neutralVariantPalette: tonalPaletteOf(neutralVariant),
+      primaryPalette: _tonalPaletteOf(primary),
+      secondaryPalette: _tonalPaletteOf(secondary),
+      tertiaryPalette: _tonalPaletteOf(tertiary),
+      neutralPalette: _tonalPaletteOf(neutral),
+      neutralVariantPalette: _tonalPaletteOf(neutralVariant),
     );
 
     Color c(DynamicColor dynColor) {

@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:ln_core/ln_core.dart';
-import 'package:logger/logger.dart';
 import 'dart:math';
 
 final Logger _logger =

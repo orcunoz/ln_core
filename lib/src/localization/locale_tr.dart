@@ -44,4 +44,10 @@ class LocaleTr implements LnLocalizations {
 
   @override
   String get refresh => "Yenile";
+
+  @override
+  String get clear => "Temizle";
+
+  @override
+  String get restore => "Geri Al";
 }

@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:ln_core/ln_core.dart';
 
-const kRowPadding = const EdgeInsets.all(16);
+const _kRowPadding = EdgeInsets.all(16);
+
+BorderRadius _resolveRowBorderRadius(ThemeData theme) {
+  return theme.cardTheme.shape?.borderRadius?.resolve(TextDirection.ltr) ??
+      BorderRadius.circular(4);
+}
 
 class SettingsGroup extends StatelessWidget {
   const SettingsGroup({
@@ -18,21 +23,18 @@ class SettingsGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final borderRadius = theme.cardTheme.shape?.borderRadius
-            ?.resolve(Directionality.of(context)) ??
-        BorderRadius.circular(4);
+    final rowBorderRadius = _resolveRowBorderRadius(theme);
+    final surfaceColor = theme.surfaces.frontSurfaceColor;
+
     Widget result = LnSurface(
-      LnSurfaceDecoration(Surfaces.brightest),
+      LnSurfaceDecoration(color: surfaceColor),
       child: Padding(
         padding: const EdgeInsets.all(6.0),
         child: SeparatedColumn(
           separator: PrecisionDivider(
-            indent: borderRadius.topLeft.x,
-            endIndent: borderRadius.topRight.x,
-            color: theme.borderColor(
-              theme.tonalScheme.surfaceBrightest,
-              sharpness: 4,
-            ),
+            indent: rowBorderRadius.topLeft.x,
+            endIndent: rowBorderRadius.topRight.x,
+            color: theme.borderColor(surfaceColor, sharpness: 4),
           ),
           children: rows,
         ),
@@ -44,18 +46,17 @@ class SettingsGroup extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (title != null)
-            Padding(
-              padding: kRowPadding.copyWith(top: 0, bottom: 0) +
-                  const EdgeInsets.only(bottom: 4),
-              child: Text(
-                title!,
-                style: theme.textTheme.labelLarge!.copyWith(
-                  color: theme.colorScheme.primary,
-                  fontWeight: FontWeight.w600,
-                ),
+          Padding(
+            padding: _kRowPadding.copyWith(top: 0, bottom: 0) +
+                const EdgeInsets.only(bottom: 4),
+            child: Text(
+              title!,
+              style: theme.textTheme.labelLarge!.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w600,
               ),
             ),
+          ),
           Flexible(child: result),
         ],
       );
@@ -96,9 +97,8 @@ class SettingsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final borderRadius = theme.cardTheme.shape?.borderRadius
-            ?.resolve(Directionality.of(context)) ??
-        BorderRadius.circular(4);
+    final borderRadius = _resolveRowBorderRadius(theme);
+    final variantColor = theme.colorScheme.onSurfaceVariant;
 
     return InkWell(
       onTap: onPressed,
@@ -106,11 +106,10 @@ class SettingsRow extends StatelessWidget {
       child: ConstrainedBox(
         constraints: BoxConstraints(minHeight: kMinInteractiveDimension),
         child: Padding(
-          padding: kRowPadding,
+          padding: _kRowPadding,
           child: Row(
             children: [
-              Icon(leadingIcon,
-                  color: theme.colorScheme.onSurfaceVariant, size: 22),
+              Icon(leadingIcon, color: variantColor, size: 22),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -120,14 +119,12 @@ class SettingsRow extends StatelessWidget {
               ),
               if (trailing != null || trailingText != null)
                 DefaultTextStyle(
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant) ??
-                      const TextStyle(),
+                  style: (theme.textTheme.bodyMedium ?? const TextStyle())
+                      .copyWith(color: variantColor),
                   child: trailing ?? Text(trailingText!),
                 ),
               if (trailingIcon != null)
-                Icon(trailingIcon,
-                    color: theme.colorScheme.onSurfaceVariant, size: 22),
+                Icon(trailingIcon, color: variantColor, size: 22),
             ],
           ),
         ),

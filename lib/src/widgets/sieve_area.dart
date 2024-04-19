@@ -49,11 +49,6 @@ class _SieveTargetRegistration {
 }
 
 class SieveArea extends StatefulWidget {
-  final double? top;
-  final double? right;
-  final double? bottom;
-  final double? left;
-  final Widget child;
   const SieveArea({
     super.key,
     this.top,
@@ -63,11 +58,17 @@ class SieveArea extends StatefulWidget {
     required this.child,
   });
 
+  final double? top;
+  final double? right;
+  final double? bottom;
+  final double? left;
+  final Widget child;
+
   @override
   State<SieveArea> createState() => _SieveAreaState();
 }
 
-class _SieveAreaState extends LnState<SieveArea> with ChangeNotifier {
+class _SieveAreaState extends LnState<SieveArea> {
   final Set<_SieveTargetRegistration> _sieveRegs = {};
   RenderObject? _ancestor;
   RenderObject? get ancestor => _ancestor ??= context.findRenderObject();
@@ -82,12 +83,12 @@ class _SieveAreaState extends LnState<SieveArea> with ChangeNotifier {
     }
 
     _sieveRegs.add(registration);
-    endOfFrame(notifyListeners);
+    rebuild();
   }
 
   void unregister(_SieveTargetState state) {
     _sieveRegs.removeWhere((reg) => reg._state == state);
-    endOfFrame(notifyListeners);
+    rebuild();
   }
 
   Rect? _calculateReplacementRect(
@@ -137,28 +138,25 @@ class _SieveAreaState extends LnState<SieveArea> with ChangeNotifier {
 
           return true;
         },
-        child: ListenableBuilder(
-          listenable: this,
-          builder: (context, child) => Stack(
-            children: [
-              widget.child,
-              for (var reg in _sieveRegs)
-                ValueListenableBuilder(
-                  valueListenable: reg.replacementRect,
-                  builder: (context, rect, child) => Visibility(
-                    visible: rect != null,
-                    child: Positioned(
-                      left: rect?.left,
-                      top: rect?.top,
-                      width: rect?.width,
-                      height: rect?.height,
-                      child: child!,
-                    ),
+        child: Stack(
+          children: [
+            widget.child,
+            for (var reg in _sieveRegs.toList())
+              ValueListenableBuilder(
+                valueListenable: reg.replacementRect,
+                builder: (context, rect, child) => Visibility(
+                  visible: rect != null,
+                  child: Positioned(
+                    left: rect?.left,
+                    top: rect?.top,
+                    width: rect?.width,
+                    height: rect?.height,
+                    child: child!,
                   ),
-                  child: reg._state.widget.child,
                 ),
-            ],
-          ),
+                child: reg._state.widget.child,
+              ),
+          ],
         ),
       ),
     );

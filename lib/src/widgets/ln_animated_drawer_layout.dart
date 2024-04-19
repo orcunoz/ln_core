@@ -1,5 +1,6 @@
-import 'package:flutter/foundation.dart';
+// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:flutter/material.dart';
+
 import 'package:ln_core/ln_core.dart';
 
 enum _AnimationsLevel {
@@ -36,10 +37,6 @@ class LnAnimatedDrawerLayout extends StatefulWidget {
     this.scaleEffectFactor = 0.90,
     this.rtlOpening = false,
     this.disabledGestures = false,
-    this.hideAnimationDuration = const Duration(milliseconds: 500),
-    this.hideAnimationCurve = Curves.easeInOut,
-    this.shrinkAnimationDuration = const Duration(milliseconds: 1000),
-    this.shrinkAnimationCurve = Curves.easeInOut,
     this.controller,
     required this.drawer,
     required this.child,
@@ -51,11 +48,6 @@ class LnAnimatedDrawerLayout extends StatefulWidget {
   final bool rtlOpening;
   final bool disabledGestures;
 
-  final Duration hideAnimationDuration;
-  final Curve? hideAnimationCurve;
-  final Duration shrinkAnimationDuration;
-  final Curve? shrinkAnimationCurve;
-
   final LnAnimatedDrawerController? controller;
   final Widget drawer;
   final Widget child;
@@ -66,136 +58,38 @@ class LnAnimatedDrawerLayout extends StatefulWidget {
 
 class _LnAnimatedDrawerLayoutState extends LnState<LnAnimatedDrawerLayout>
     with TickerProviderStateMixin {
-  LnAnimatedDrawerController? _internalDrawerController;
+  LnAnimatedDrawerController? _localController;
+  LnAnimatedDrawerController get controller =>
+      widget.controller ?? _localController!;
 
-  LnAnimatedDrawerController get _drawerController {
-    return widget.controller ?? _internalDrawerController!;
-  }
-
-  late final _hideAnimationController = AnimationController(
-    vsync: this,
-    value: _drawerController.value.visible ? 1 : 0,
-  );
-  late final _shrinkAnimationController = AnimationController(
-    vsync: this,
-    value: _drawerController.value.shrinked ? 0 : 1,
-  );
-
-  Animation<double>? _toggleAnimation;
-  Animation<double>? _shrinkAnimation;
-  Animation<double>? _childScaleAnimation;
-
-  _AnimationsLevel? _animationsLevel;
-  _AnimationsLevel get animationsLevel {
-    assert(_animationsLevel != null);
-    return _animationsLevel!;
-  }
+  _CapturedDragStart? _captured;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    var newAnimationsLevel = _AnimationsLevel.from(mediaQuery.layoutLevel);
-    if (_animationsLevel != newAnimationsLevel) {
-      _animationsLevel = newAnimationsLevel;
-      _drawerController._resetStateFor(animationsLevel);
-
-      switch (animationsLevel) {
-        case _AnimationsLevel.compact:
-          if (_drawerController.value.visible) {
-            void statusListener(status) {
-              if (status == AnimationStatus.completed ||
-                  status == AnimationStatus.dismissed) {
-                _toggleAnimation!.removeStatusListener(statusListener);
-                _drawerController.expand();
-              }
-            }
-
-            _toggleAnimation!.addStatusListener(statusListener);
-          }
-
-          _refreshChildScaleAnimation();
-          break;
-        case _AnimationsLevel.mediumExpanded:
-          if (_childScaleAnimation == null ||
-              _drawerController.value.shrinked) {
-            _refreshChildScaleAnimation();
-          } else {
-            void statusListener(status) {
-              if (status == AnimationStatus.completed ||
-                  status == AnimationStatus.dismissed) {
-                _shrinkAnimation!.removeStatusListener(statusListener);
-                _refreshChildScaleAnimation();
-                rebuild();
-              }
-            }
-
-            _shrinkAnimation!.addStatusListener(statusListener);
-          }
-          break;
-        case _AnimationsLevel.expandedPlus:
-          _refreshChildScaleAnimation();
-          break;
-      }
-    }
-  }
-
-  void _refreshChildScaleAnimation() {
-    assert(_animationsLevel != null);
-    Animation<double>? parent = _animationsLevel == _AnimationsLevel.compact
-        ? _toggleAnimation
-        : _shrinkAnimation;
-
-    assert(parent != null);
-    _childScaleAnimation = switch (_animationsLevel!) {
-      < _AnimationsLevel.expandedPlus => Tween<double>(
-          begin: 1.0,
-          end: widget.scaleEffectFactor,
-        ).animate(parent!),
-      _ => AlwaysStoppedAnimation(1.0),
-    };
+    final level = _AnimationsLevel.from(layoutLevel);
+    controller._setAnimationsLevel(level);
   }
 
   @override
   void didUpdateWidget(covariant LnAnimatedDrawerLayout oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.controller != oldWidget.controller) {
-      (oldWidget.controller ?? _internalDrawerController)!
-          .removeListener(_handleControllerChanged);
+      final oldController = oldWidget.controller ?? _localController!;
+      oldController.removeListener(_handleControllerChanged);
 
       if (widget.controller == null) {
-        _internalDrawerController = LnAnimatedDrawerController()
-          ..value = LnDrawerLayoutState(
-            shrinked: oldWidget.controller!.value.shrinked,
-            visible: oldWidget.controller!.value.visible,
-          );
+        _localController = LnAnimatedDrawerController(
+          vsync: this,
+          initialLayoutLevel: layoutLevel,
+        );
       } else {
-        _internalDrawerController!.dispose();
-        _internalDrawerController = null;
+        _localController!.dispose();
+        _localController = null;
       }
 
-      (widget.controller ?? _internalDrawerController)!
-          .addListener(_handleControllerChanged);
-
-      _handleControllerChanged();
-    }
-
-    if (widget.scaleEffectFactor != oldWidget.scaleEffectFactor) {
-      _refreshChildScaleAnimation();
-    }
-
-    if (widget.expandedDrawerWidth != oldWidget.expandedDrawerWidth ||
-        widget.shrinkedDrawerWidth != oldWidget.shrinkedDrawerWidth ||
-        widget.rtlOpening != oldWidget.rtlOpening) {}
-
-    if (widget.shrinkAnimationCurve != oldWidget.shrinkAnimationCurve ||
-        widget.hideAnimationCurve != oldWidget.hideAnimationCurve) {
-      _createAnimations();
-    }
-
-    if (widget.shrinkAnimationDuration != oldWidget.shrinkAnimationDuration ||
-        widget.hideAnimationDuration != oldWidget.hideAnimationDuration) {
-      _updateAnimationDurations();
+      controller.addListener(_handleControllerChanged);
     }
   }
 
@@ -203,53 +97,34 @@ class _LnAnimatedDrawerLayoutState extends LnState<LnAnimatedDrawerLayout>
   void initState() {
     super.initState();
 
-    _updateAnimationDurations();
-    _createAnimations();
-
     if (widget.controller == null) {
-      _internalDrawerController = LnAnimatedDrawerController();
+      _localController = LnAnimatedDrawerController(
+        vsync: this,
+        initialLayoutLevel: layoutLevel,
+      );
     }
 
-    _drawerController.addListener(_handleControllerChanged);
+    controller.addListener(_handleControllerChanged);
   }
 
-  void _updateAnimationDurations() {
-    _shrinkAnimationController
-      ..duration = widget.shrinkAnimationDuration
-      ..reverseDuration = widget.shrinkAnimationDuration;
-    _hideAnimationController
-      ..duration = widget.hideAnimationDuration
-      ..reverseDuration = widget.hideAnimationDuration;
-  }
-
-  void _createAnimations() {
-    _toggleAnimation = _createAnimation(
-      _hideAnimationController,
-      widget.hideAnimationCurve,
-    );
-    _shrinkAnimation = _createAnimation(
-      _shrinkAnimationController,
-      widget.shrinkAnimationCurve,
-    )..addListener(() {
-        final shrinkTransition = _shrinkAnimation?.value;
-        if (shrinkTransition != null) {
-          _drawerController._shrinkNotifier.value = shrinkTransition;
-        }
-      });
+  void _handleControllerChanged() {
+    if (controller.value.hidden) {
+      DeviceUtils.hideKeyboard(context);
+    }
   }
 
   Widget _buildChildOverlay(BuildContext context) {
-    onTap() => switch (animationsLevel) {
-          _AnimationsLevel.mediumExpanded => _drawerController.shrink(),
-          _AnimationsLevel.compact => _drawerController.hide(),
+    onTap() => switch (controller._animationsLevel) {
+          _AnimationsLevel.mediumExpanded => controller.shrink(),
+          _AnimationsLevel.compact => controller.hide(),
           _AnimationsLevel.expandedPlus => ()
         };
 
     return ValueListenableBuilder<LnDrawerLayoutState>(
-      valueListenable: _drawerController,
+      valueListenable: controller,
       builder: (context, value, overlay) {
-        bool overlayEnabled = switch (animationsLevel) {
-          _AnimationsLevel.compact => value.visible,
+        bool overlayEnabled = switch (controller._animationsLevel) {
+          _AnimationsLevel.compact => !value.hidden,
           _AnimationsLevel.mediumExpanded => !value.shrinked,
           _AnimationsLevel.expandedPlus => false,
         };
@@ -259,14 +134,14 @@ class _LnAnimatedDrawerLayoutState extends LnState<LnAnimatedDrawerLayout>
         );
       },
       child: switch (widget.scaleEffectFactor) {
-        1 => GestureDetector(
+        /*1 => GestureDetector(
             behavior: HitTestBehavior.opaque,
             onPanDown: (details) => onTap(),
-          ),
+          ),*/
         _ => Material(
             type: MaterialType.transparency,
             child: InkWell(
-              borderRadius: theme.surfaces.borderRadius,
+              //borderRadius: theme.surfaces.borderRadius,
               onTap: onTap,
             ),
           ),
@@ -275,179 +150,155 @@ class _LnAnimatedDrawerLayoutState extends LnState<LnAnimatedDrawerLayout>
   }
 
   Widget _buildChild(BuildContext context, TextDirection direction) {
-    Widget child = Stack(
-      clipBehavior: Clip.none,
-      children: [
-        RepaintBoundary(child: widget.child),
-        _buildChildOverlay(context),
-      ],
-    );
+    final scaleAnimation = switch (controller._animationsLevel) {
+      < _AnimationsLevel.expandedPlus => Tween<double>(
+          begin: 1.0,
+          end: widget.scaleEffectFactor,
+        ).animate(controller._animationsLevel == _AnimationsLevel.compact
+            ? controller.hideAnimation
+            : controller.shrinkAnimation),
+      _ => AlwaysStoppedAnimation(1.0),
+    };
 
-    child = ScaleTransition(
-      scale: _childScaleAnimation!,
-      child: child,
-    );
+    Animation<RelativeRect> positionAnimation(double hideTransition) {
+      final reverseTransition = 1 - hideTransition;
+      final shrinkedStart = widget.shrinkedDrawerWidth * reverseTransition;
+      final expandedStart = widget.expandedDrawerWidth * reverseTransition;
 
-    child = AnimatedBuilder(
-      animation: _toggleAnimation!,
+      return RelativeRectTween(
+        begin: RelativeRect.fromDirectional(
+          textDirection: direction,
+          top: 0,
+          bottom: 0,
+          start: expandedStart,
+          end: switch (controller._animationsLevel) {
+            _AnimationsLevel.compact => -expandedStart,
+            _AnimationsLevel.mediumExpanded => shrinkedStart - expandedStart,
+            _AnimationsLevel.expandedPlus => 0,
+          },
+        ),
+        end: RelativeRect.fromDirectional(
+          textDirection: direction,
+          top: 0,
+          bottom: 0,
+          start: shrinkedStart,
+          end: switch (controller._animationsLevel) {
+            _AnimationsLevel.compact => -shrinkedStart,
+            _AnimationsLevel.mediumExpanded => 0,
+            _AnimationsLevel.expandedPlus => 0,
+          },
+        ),
+      ).animate(controller.shrinkAnimation);
+    }
+
+    return AnimatedBuilder(
+      animation: controller.hideAnimation,
       builder: (context, child) {
-        final shrinkedStart =
-            widget.shrinkedDrawerWidth * (_toggleAnimation!.value);
-        final expandedStart =
-            widget.expandedDrawerWidth * (_toggleAnimation!.value);
         return PositionedTransition(
-          rect: RelativeRectTween(
-            begin: RelativeRect.fromDirectional(
-              textDirection: direction,
-              top: 0,
-              bottom: 0,
-              start: shrinkedStart,
-              end: switch (animationsLevel) {
-                _AnimationsLevel.compact => -shrinkedStart,
-                _AnimationsLevel.mediumExpanded => 0,
-                _AnimationsLevel.expandedPlus => 0,
-              },
-            ),
-            end: RelativeRect.fromDirectional(
-              textDirection: direction,
-              top: 0,
-              bottom: 0,
-              start: expandedStart,
-              end: switch (animationsLevel) {
-                _AnimationsLevel.compact => -expandedStart,
-                _AnimationsLevel.mediumExpanded =>
-                  shrinkedStart - expandedStart,
-                _AnimationsLevel.expandedPlus => 0,
-              },
-            ),
-          ).animate(_shrinkAnimation!),
+          rect: positionAnimation(controller.hideAnimation.value),
           child: child!,
         );
       },
-      child: child,
+      child: ScaleTransition(
+        scale: scaleAnimation,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            RepaintBoundary(child: widget.child),
+            _buildChildOverlay(context),
+          ],
+        ),
+      ),
     );
-
-    return child;
   }
 
   Widget _buildDrawer(BuildContext context, TextDirection direction) {
-    Widget drawer = widget.drawer;
+    final scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.0 / widget.scaleEffectFactor,
+    ).animate(controller.hideAnimation);
 
-    drawer = ScaleTransition(
-      scale: Tween<double>(
-        begin: 1.0 / widget.scaleEffectFactor,
-        end: 1.0,
-      ).animate(_toggleAnimation!),
-      alignment:
-          widget.rtlOpening ? Alignment.centerLeft : Alignment.centerRight,
-      child: drawer,
-    );
+    Animation<Rect?> positionAnimation(double hideTransition) {
+      Rect rectFor(double maxSlide) {
+        final reverseTransition = 1 - hideTransition;
+        final left = switch (direction) {
+          TextDirection.ltr => maxSlide * (reverseTransition - 1),
+          TextDirection.rtl =>
+            mediaQuery.size.width - maxSlide * reverseTransition,
+        };
+        return Rect.fromLTWH(left, 0, maxSlide, mediaQuery.size.height);
+      }
 
-    drawer = AnimatedBuilder(
-      animation: _toggleAnimation!,
+      return RectTween(
+        begin: rectFor(widget.expandedDrawerWidth),
+        end: rectFor(widget.shrinkedDrawerWidth),
+      ).animate(controller.shrinkAnimation);
+    }
+
+    return AnimatedBuilder(
+      animation: controller.hideAnimation,
       builder: (context, child) {
-        Rect rectFor(double transition, double maxSlide) {
-          final left = switch (direction) {
-            TextDirection.ltr => maxSlide * (transition - 1),
-            TextDirection.rtl => mediaQuery.size.width - maxSlide * transition,
-          };
-          return Rect.fromLTWH(left, 0, maxSlide, mediaQuery.size.height);
-        }
-
         return RelativePositionedTransition(
-          rect: RectTween(
-            begin: rectFor(_toggleAnimation!.value, widget.shrinkedDrawerWidth),
-            end: rectFor(_toggleAnimation!.value, widget.expandedDrawerWidth),
-          ).animate(_shrinkAnimation!),
+          rect: positionAnimation(controller.hideAnimation.value),
           size: mediaQuery.size,
           child: child!,
         );
       },
-      child: drawer,
+      child: ScaleTransition(
+        scale: scaleAnimation,
+        alignment:
+            widget.rtlOpening ? Alignment.centerLeft : Alignment.centerRight,
+        child: widget.drawer,
+      ),
     );
-
-    return drawer;
   }
 
   @override
   Widget build(BuildContext context) {
     final direction = widget.rtlOpening ? TextDirection.rtl : TextDirection.ltr;
-    _createAnimations();
 
-    return GestureDetector(
-      onHorizontalDragStart: widget.disabledGestures ? null : _handleDragStart,
-      onHorizontalDragUpdate:
-          widget.disabledGestures ? null : _handleDragUpdate,
-      onHorizontalDragEnd: widget.disabledGestures ? null : _handleDragEnd,
-      onHorizontalDragCancel:
-          widget.disabledGestures ? null : _handleDragCancel,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          _buildDrawer(context, direction),
-          _buildChild(context, direction),
-        ],
-      ),
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        _buildDrawer(context, direction),
+        _buildChild(context, direction),
+        if (!widget.disabledGestures)
+          Positioned.fill(
+            top: kToolbarHeight,
+            child: GestureDetector(
+              onHorizontalDragStart: _handleDragStart,
+              onHorizontalDragUpdate: _handleDragUpdate,
+              onHorizontalDragEnd: _handleDragEnd,
+              onHorizontalDragCancel: _handleDragCancel,
+            ),
+          ),
+      ],
     );
   }
 
-  Animation<double> _createAnimation(Animation<double> parent, Curve? curve) {
-    return curve == null
-        ? parent
-        : CurvedAnimation(
-            curve: curve,
-            reverseCurve: curve,
-            parent: parent,
-          );
-  }
-
-  void _handleControllerChanged() {
-    if (_drawerController.value.visible) {
-      DeviceUtils.hideKeyboard(context);
-    }
-
-    // value: 0 -> shrinked   1 -> expanded
-    _drawerController.value.shrinked
-        ? _shrinkAnimationController.reverse()
-        : _shrinkAnimationController.forward();
-
-    // value: 0 -> hidden   1 -> visible
-    _drawerController.value.visible
-        ? _hideAnimationController.forward()
-        : _hideAnimationController.reverse();
-  }
-
-  //bool _captured = false;
-  _CapturedDragStart? _captured;
-
   void _handleDragStart(DragStartDetails details) {
-    if (_drawerController.canHide) {
+    if (controller.hideable) {
       _captured = _CapturedDragStart(
-          position: details.globalPosition,
-          controller: _hideAnimationController,
-          slidableLength: _drawerController.value.shrinked
-              ? widget.shrinkedDrawerWidth
-              : widget.expandedDrawerWidth,
-          completer: () => _hideAnimationController.value >= 0.5
-              ? (_drawerController.value.visible
-                  ? _hideAnimationController.forward()
-                  : _drawerController.show())
-              : (!_drawerController.value.visible
-                  ? _hideAnimationController.reverse()
-                  : _drawerController.hide()));
+        position: details.globalPosition,
+        slidableLength: controller.value.shrinked
+            ? widget.shrinkedDrawerWidth
+            : widget.expandedDrawerWidth,
+        completer: controller._completeHideAnimation,
+        value: controller.hideAnimation.value,
+        valueChanged: (value) {
+          controller._hideController.value = value;
+        },
+      );
     } else {
       _captured = _CapturedDragStart(
-          position: details.globalPosition,
-          controller: _shrinkAnimationController,
-          slidableLength:
-              widget.expandedDrawerWidth - widget.shrinkedDrawerWidth,
-          completer: () => _shrinkAnimationController.value >= 0.5
-              ? (_drawerController.value.shrinked
-                  ? _shrinkAnimationController.forward()
-                  : _drawerController.expand())
-              : (!_drawerController.value.shrinked
-                  ? _shrinkAnimationController.reverse()
-                  : _drawerController.shrink()));
+        position: details.globalPosition,
+        slidableLength: widget.expandedDrawerWidth - widget.shrinkedDrawerWidth,
+        completer: controller._completeShrinkAnimation,
+        value: controller.shrinkAnimation.value,
+        valueChanged: (value) {
+          controller._shrinkController.value = value;
+        },
+      );
     }
   }
 
@@ -467,10 +318,8 @@ class _LnAnimatedDrawerLayoutState extends LnState<LnAnimatedDrawerLayout>
 
   @override
   void dispose() {
-    _drawerController.removeListener(_handleControllerChanged);
-    _internalDrawerController?.dispose();
-    _hideAnimationController.dispose();
-    _shrinkAnimationController.dispose();
+    controller.removeListener(_handleControllerChanged);
+    _localController?.dispose();
 
     super.dispose();
   }
@@ -478,125 +327,186 @@ class _LnAnimatedDrawerLayoutState extends LnState<LnAnimatedDrawerLayout>
 
 class _CapturedDragStart {
   _CapturedDragStart({
+    required this.value,
+    required this.valueChanged,
     required this.position,
-    required this.controller,
     required this.slidableLength,
     required this.completer,
-  }) : value = controller.value;
+  });
 
-  final AnimationController controller;
   final double value;
+  final ValueChanged<double> valueChanged;
   final Offset position;
   final double slidableLength;
-  final Function completer;
+  final VoidCallback completer;
 
   void handleDragPositionUpdate(Offset newPosition, bool rtlOpening) {
     final diff = (newPosition - position).dx;
-    final slideDirectionSign = (rtlOpening ? -1 : 1);
-    controller.value = value + (diff / slidableLength) * slideDirectionSign;
+    final slideDirectionSign = (rtlOpening ? 1 : -1);
+    valueChanged(value + (diff / slidableLength) * slideDirectionSign);
   }
 }
 
 class LnAnimatedDrawerController extends ValueNotifier<LnDrawerLayoutState> {
-  /// Creates controller with initial drawer state. (Hidden by default)
-  LnAnimatedDrawerController()
-      : super(const LnDrawerLayoutState(shrinked: false, visible: true));
+  LnAnimatedDrawerController({
+    required LayoutLevel initialLayoutLevel,
+    required TickerProvider vsync,
+    Duration hideAnimationDuration = const Duration(milliseconds: 500),
+    Curve hideAnimationCurve = Curves.easeInOut,
+    Duration shrinkAnimationDuration = const Duration(milliseconds: 750),
+    Curve shrinkAnimationCurve = Curves.easeInOut,
+  }) : this._(
+          vsync: vsync,
+          animationsLevel: _AnimationsLevel.from(initialLayoutLevel),
+          hideAnimationDuration: hideAnimationDuration,
+          shrinkAnimationDuration: shrinkAnimationDuration,
+          hideAnimationCurve: hideAnimationCurve,
+          shrinkAnimationCurve: shrinkAnimationCurve,
+        );
 
-  bool _canHide = true;
+  LnAnimatedDrawerController._({
+    required TickerProvider vsync,
+    required _AnimationsLevel animationsLevel,
+    required Duration hideAnimationDuration,
+    required this.hideAnimationCurve,
+    required Duration shrinkAnimationDuration,
+    required this.shrinkAnimationCurve,
+  })  : _animationsLevel = animationsLevel,
+        _hideable = animationsLevel == _AnimationsLevel.compact,
+        super(LnDrawerLayoutState._byLevel(animationsLevel)) {
+    _hideController = AnimationController(
+      vsync: vsync,
+      value: value.hidden ? 1 : 0,
+      duration: hideAnimationDuration,
+    )..addStatusListener((status) {
+        if (_animationValueHidden != value.hidden) {
+          value = value.copyWith(hidden: _animationValueHidden);
+        }
+      });
 
-  bool get canHide => _canHide;
-  set canHide(bool value) {
-    if (_canHide != value) {
-      _canHide = value;
-      if (!_canHide && !this.value.visible) {
-        show();
-      } else {
-        notifyListeners();
+    _shrinkController = AnimationController(
+      vsync: vsync,
+      value: value.shrinked ? 1 : 0,
+      duration: shrinkAnimationDuration,
+    )..addStatusListener((status) {
+        if (_animationValueShrinked != value.shrinked) {
+          value = value.copyWith(shrinked: _animationValueShrinked);
+        }
+      });
+  }
+
+  bool get _animationValueHidden => hideAnimation.value >= .5;
+  bool get _animationValueShrinked => shrinkAnimation.value >= .5;
+
+  late final AnimationController _hideController;
+  late final AnimationController _shrinkController;
+
+  Animation<double> get hideAnimation => _hideController;
+  Animation<double> get shrinkAnimation => _shrinkController;
+
+  final Curve hideAnimationCurve;
+  final Curve shrinkAnimationCurve;
+
+  bool _hideable;
+  bool get hideable => _hideable;
+
+  void _setHideable(bool value) {
+    if (_hideable != value) {
+      _hideable = value;
+      if (!_hideable) show();
+      notifyListeners();
+    }
+  }
+
+  _AnimationsLevel _animationsLevel;
+
+  void _setAnimationsLevel(_AnimationsLevel level) {
+    if (_animationsLevel != level) {
+      _animationsLevel = level;
+      _setHideable(_animationsLevel == _AnimationsLevel.compact);
+
+      switch (_animationsLevel) {
+        case _AnimationsLevel.compact:
+          expand();
+          hide();
+          break;
+        case _AnimationsLevel.mediumExpanded:
+          shrink();
+          break;
+        case _AnimationsLevel.expandedPlus:
+          expand();
+          break;
       }
     }
   }
 
-  late final _shrinkNotifier = ValueNotifier<double>(value.shrinked ? 0 : 1);
-  ValueListenable<double> get shrinkListenable => _shrinkNotifier;
-
-  void _resetStateFor(_AnimationsLevel level) {
-    switch (level) {
-      case _AnimationsLevel.compact:
-        canHide = true;
-        hide();
-        break;
-      case _AnimationsLevel.mediumExpanded:
-        shrink();
-        show();
-        canHide = false;
-        break;
-      case _AnimationsLevel.expandedPlus:
-        expand();
-        show();
-        canHide = false;
-        break;
-    }
-  }
-
-  /// Shows drawer.
-  void show() {
-    value = value.copyWith(visible: true);
-  }
-
-  /// Hides drawer.
+  // hide - show
   void hide() {
-    assert(canHide);
-    value = value.copyWith(visible: false);
+    assert(hideable);
+    _hideController.animateTo(1, curve: hideAnimationCurve);
   }
 
-  /// Toggles drawer.
-  void toggleDrawer() {
-    if (value.visible) {
-      hide();
-    } else {
-      show();
-    }
+  void show() {
+    _hideController.animateTo(0, curve: hideAnimationCurve);
+  }
+
+  void toggleDrawer() => _animationValueHidden ? show() : hide();
+
+  void _completeHideAnimation() => _animationValueHidden ? hide() : show();
+
+  // shrink - expand
+  void shrink() {
+    _shrinkController.animateTo(1, curve: shrinkAnimationCurve);
   }
 
   void expand() {
-    value = value.copyWith(shrinked: false);
+    _shrinkController.animateTo(0, curve: shrinkAnimationCurve);
   }
 
-  void shrink() {
-    value = value.copyWith(shrinked: true);
-  }
+  void toggleShrinking() => _animationValueShrinked ? expand() : shrink();
 
-  void toggleShrinking() {
-    if (value.shrinked) {
-      expand();
-    } else {
-      shrink();
-    }
-  }
+  void _completeShrinkAnimation() =>
+      _animationValueShrinked ? shrink() : expand();
 
   @override
   void dispose() {
+    _hideController.dispose();
+    _shrinkController.dispose();
+
     super.dispose();
-    _shrinkNotifier.dispose();
   }
 }
 
 class LnDrawerLayoutState {
   const LnDrawerLayoutState({
     required this.shrinked,
-    required this.visible,
+    required this.hidden,
   });
 
-  final bool visible;
+  factory LnDrawerLayoutState._byLevel(_AnimationsLevel level) =>
+      switch (level) {
+        _AnimationsLevel.compact =>
+          LnDrawerLayoutState(hidden: true, shrinked: false),
+        _AnimationsLevel.mediumExpanded =>
+          LnDrawerLayoutState(hidden: false, shrinked: true),
+        _AnimationsLevel.expandedPlus =>
+          LnDrawerLayoutState(hidden: false, shrinked: false),
+      };
+
+  final bool hidden;
   final bool shrinked;
 
   LnDrawerLayoutState copyWith({
-    bool? visible,
+    bool? hidden,
     bool? shrinked,
   }) {
     return LnDrawerLayoutState(
-      visible: visible ?? this.visible,
+      hidden: hidden ?? this.hidden,
       shrinked: shrinked ?? this.shrinked,
     );
   }
+
+  @override
+  String toString() =>
+      'LnDrawerLayoutState(hidden: $hidden, shrinked: $shrinked)';
 }

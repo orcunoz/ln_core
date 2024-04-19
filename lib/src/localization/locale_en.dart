@@ -44,4 +44,10 @@ class LocaleEn implements LnLocalizations {
 
   @override
   String get refresh => "Refresh";
+
+  @override
+  String get clear => "Clear";
+
+  @override
+  String get restore => "Restore";
 }

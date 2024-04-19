@@ -3,11 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:ln_core/ln_core.dart';
 
-extension ColorSchemeExtensions on ColorScheme {
-  bool get isDark => brightness.isDark;
-  bool get isLight => brightness.isLight;
-}
-
 extension BrightnessExtensions on Brightness {
   bool get isDark => this == Brightness.dark;
   bool get isLight => this == Brightness.light;

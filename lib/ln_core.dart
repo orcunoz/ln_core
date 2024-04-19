@@ -10,9 +10,9 @@ export 'src/utils/styling/borders.dart';
 export 'src/utils/styling/colors.dart';
 export 'src/utils/styling/theme.dart';
 export 'src/utils/styling/tonal_theme.dart';
+export 'src/utils/styling/layout.dart';
 export 'src/utils/styling/edge_insets.dart';
 export 'src/utils/styling/shadows.dart';
-export 'src/utils/styling/ui.dart';
 
 export 'src/utils/collection_utils.dart';
 export 'src/utils/currency_utils.dart';
@@ -24,6 +24,7 @@ export 'src/utils/file_utils.dart';
 export 'src/utils/layout_utils.dart';
 export 'src/utils/logger.dart';
 export 'src/utils/number_utils.dart';
+export 'src/utils/platform.dart';
 export 'src/utils/regex_utils.dart';
 export 'src/utils/rendering_utils.dart';
 export 'src/utils/sorted_list.dart';
@@ -67,3 +68,6 @@ export 'src/widgets/search/searchable_scope.dart';
 export 'src/models/wrapped.dart';
 
 export 'package:window_manager/window_manager.dart';
+
+export 'package:universal_io/io.dart';
+export 'package:logger/logger.dart';

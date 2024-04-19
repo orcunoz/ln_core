@@ -1,5 +1,6 @@
 import "dart:async";
 
+import "package:flutter/material.dart";
 import "package:stack_trace/stack_trace.dart";
 
 import "dynamic_function.dart";
@@ -20,6 +21,26 @@ extension ThrottleDebounceFunctionExtensions<T extends Function> on T {
 
 Map<Object, Timer> _throttles = <Object, Timer>{};
 Map<Object, Timer> _debounces = <Object, Timer>{};
+
+class DebouncedAction {
+  DebouncedAction({
+    required this.action,
+    this.duration = const Duration(milliseconds: 350),
+  });
+
+  final VoidCallback action;
+  final Duration duration;
+  Timer? _timer;
+
+  void invoke() {
+    if (duration == Duration.zero) {
+      action();
+    } else {
+      _timer?.cancel();
+      _timer = Timer(duration, action);
+    }
+  }
+}
 
 void throttle(
   Function fn, {

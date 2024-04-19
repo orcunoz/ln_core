@@ -33,6 +33,28 @@ class SearchScope extends StatefulWidget {
     required SearchableScopeBuilder this.builder,
   }) : child = null;
 
+  static SearchScope listFiltererBuilder<T>({
+    Key? key,
+    Duration? debounceDuration = const Duration(milliseconds: 200),
+    final Iterable<T>? list,
+    final List<Object?> Function(T)? searchFields,
+    required Widget Function(
+            BuildContext context, Iterable<T>? filteredList, String searchText)
+        builder,
+  }) {
+    return SearchScope.builder(
+      key: key,
+      debounceDuration: debounceDuration,
+      builder: (context, searchScope) {
+        final filteredList = (list == null
+            ? null
+            : searchScope.filter(list, fields: searchFields));
+
+        return builder(context, filteredList, searchScope.value);
+      },
+    );
+  }
+
   final Duration? debounceDuration;
   final SearchableScopeBuilder? builder;
   final Widget? child;
@@ -71,8 +93,8 @@ class _SearchScopeState extends State<SearchScope> {
 
   @override
   void dispose() {
-    super.dispose();
     controller.dispose();
+    super.dispose();
   }
 }
 

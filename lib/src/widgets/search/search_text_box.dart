@@ -31,13 +31,11 @@ class SearchTextBox extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize => Size.fromHeight(kMinInteractiveDimension);
 
   Widget _buildPrefixIcon(
-    String searchText,
     bool debounced,
     Color foregroundColor,
-    VoidCallback onBackPressed,
   ) {
     Widget result = Icon(
-      searchText.isEmpty ? Icons.search_rounded : Icons.arrow_back_rounded,
+      Icons.search_rounded,
       color: foregroundColor,
     );
 
@@ -48,14 +46,24 @@ class SearchTextBox extends StatelessWidget implements PreferredSizeWidget {
       );
     }
 
-    if (searchText.isNotEmpty) {
-      result = IconButton(
-        onPressed: onBackPressed,
-        icon: result,
-      );
-    }
-
     return result;
+  }
+
+  Widget? _buildSuffixIcon(
+    String searchText,
+    bool debounced,
+    Color foregroundColor,
+    VoidCallback onBackPressed,
+  ) {
+    return debounced || searchText.isEmpty
+        ? null
+        : IconButton(
+            onPressed: onBackPressed,
+            icon: Icon(
+              Icons.close_rounded,
+              color: foregroundColor,
+            ),
+          );
   }
 
   @override
@@ -83,45 +91,49 @@ class SearchTextBox extends StatelessWidget implements PreferredSizeWidget {
           borderSide: BorderSide.none,
         );
 
-    Widget child = TextField(
-      controller: scopeController.textEditingController,
-      style: textStyle,
-      enabled: enabled,
-      autofocus: autofocus,
-      textAlignVertical: TextAlignVertical.center,
-      expands: constraints?.maxHeight.isInfinite == false,
-      maxLines: null,
-      decoration: InputDecoration(
-        isCollapsed: true,
-        fillColor: fillColor,
-        focusColor: theme.searchBarTheme.backgroundColor
-            ?.resolve({MaterialState.focused}),
-        hoverColor: theme.searchBarTheme.backgroundColor
-            ?.resolve({MaterialState.hovered}),
-        border: border,
-        enabledBorder: border,
-        focusedBorder: border,
-        disabledBorder: border,
-        prefixIcon: ListenableBuilder(
-          listenable: Listenable.merge([
-            scopeController,
-            scopeController.debounceListenable,
-          ]),
-          builder: (context, child) => _buildPrefixIcon(
+    Widget child = ListenableBuilder(
+      listenable: Listenable.merge([
+        scopeController,
+        scopeController.debounceListenable,
+      ]),
+      builder: (context, child) => TextField(
+        controller: scopeController.textEditingController,
+        style: textStyle,
+        enabled: enabled,
+        autofocus: autofocus,
+        textAlignVertical: TextAlignVertical.center,
+        expands: constraints?.maxHeight.isInfinite == false,
+        maxLines: null,
+        decoration: InputDecoration(
+          isCollapsed: true,
+          fillColor: fillColor,
+          focusColor: theme.searchBarTheme.backgroundColor
+              ?.resolve({MaterialState.focused}),
+          hoverColor: theme.searchBarTheme.backgroundColor
+              ?.resolve({MaterialState.hovered}),
+          border: border,
+          enabledBorder: border,
+          focusedBorder: border,
+          disabledBorder: border,
+          prefixIcon: _buildPrefixIcon(
+            scopeController.debounced,
+            foregroundColor,
+          ),
+          suffixIcon: _buildSuffixIcon(
             scopeController.textEditingController.text,
             scopeController.debounced,
             foregroundColor,
             scopeController.clear,
           ),
+          hintText: "${MaterialLocalizations.of(context).searchFieldLabel}...",
+          hintStyle: textStyle,
+          prefixIconConstraints: BoxConstraints.expand(
+            width: kMinInteractiveDimension,
+            height: kMinInteractiveDimension,
+          ),
+          constraints: constraints ??
+              BoxConstraints.tightFor(height: kMinInteractiveDimension),
         ),
-        hintText: "${MaterialLocalizations.of(context).searchFieldLabel}...",
-        hintStyle: textStyle,
-        prefixIconConstraints: BoxConstraints.expand(
-          width: kMinInteractiveDimension,
-          height: kMinInteractiveDimension,
-        ),
-        constraints: constraints ??
-            BoxConstraints.tightFor(height: kMinInteractiveDimension),
       ),
     );
 

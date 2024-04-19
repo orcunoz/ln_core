@@ -22,6 +22,8 @@ abstract class LnLocalizations extends LnLocalizationsBase {
   String get unauthorizedAccess;
 
   String get refresh;
+  String get restore;
+  String get clear;
 
   static const delegate = LnLocalizationsDelegate<LnLocalizations>(
     [LocaleEn(), LocaleTr()],

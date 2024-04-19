@@ -3,12 +3,19 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ln_core/ln_core.dart';
-import 'package:universal_io/io.dart';
 import 'package:universal_platform/universal_platform.dart';
 
-/// Helper class for device related operations.
-///
 final class DeviceUtils {
+  static Orientation? get implicitViewOrientation {
+    final Size? size =
+        WidgetsBinding.instance.platformDispatcher.implicitView?.physicalSize;
+    return size == null
+        ? null
+        : size.width > size.height
+            ? Orientation.landscape
+            : Orientation.portrait;
+  }
+
   static hideKeyboard(BuildContext context) {
     FocusScope.of(context).unfocus();
   }
@@ -19,8 +26,7 @@ final class DeviceUtils {
 
   static Future<void> copyToClipboard(String text) async {
     if (text.isNotEmpty) {
-      Clipboard.setData(ClipboardData(text: text));
-      return;
+      await Clipboard.setData(ClipboardData(text: text));
     } else {
       throw ('Please enter a string');
     }
@@ -89,13 +95,13 @@ final class DeviceUtils {
     await windowManager.focus();
   }
 
-  static exitApp() {
+  static Future<void> exitApp() async {
     if (UniversalPlatform.isAndroid) {
-      SystemNavigator.pop();
+      await SystemNavigator.pop();
     } else if (UniversalPlatform.isIOS || UniversalPlatform.isFuchsia) {
       exit(0);
     } else if (UniversalPlatform.isDesktop) {
-      windowManager.close();
+      await windowManager.close();
     }
   }
 }

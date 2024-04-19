@@ -29,7 +29,7 @@ class LnVerticalMenu extends StatefulWidget {
     this.backgroundColor,
     this.shape,
     this.groupsSpacing = 20,
-    this.replaceTitlesWithDivider = false,
+    this.railMode = false,
     this.itemSelectedKey,
     required this.itemExpandedWidth,
     this.itemPadding = const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -44,7 +44,7 @@ class LnVerticalMenu extends StatefulWidget {
   final Color? backgroundColor;
 
   final double groupsSpacing;
-  final bool replaceTitlesWithDivider;
+  final bool railMode;
 
   final Key? itemSelectedKey;
   final EdgeInsets itemPadding;
@@ -115,7 +115,7 @@ class LnVerticalMenuState extends LnState<LnVerticalMenu>
   void didUpdateWidget(LnVerticalMenu oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (widget.replaceTitlesWithDivider != oldWidget.replaceTitlesWithDivider ||
+    if (widget.railMode != oldWidget.railMode ||
         widget.groupsSpacing != oldWidget.groupsSpacing ||
         widget.itemPadding != oldWidget.itemPadding) {
       for (var groupTitle in _groupTitles) {
@@ -123,7 +123,7 @@ class LnVerticalMenuState extends LnState<LnVerticalMenu>
       }
     }
 
-    if (widget.replaceTitlesWithDivider != oldWidget.replaceTitlesWithDivider ||
+    if (widget.railMode != oldWidget.railMode ||
         widget.itemPadding != oldWidget.itemPadding) {
       for (var item in _items) {
         item.setState(() {});
@@ -193,9 +193,8 @@ class _LnMenuGroupTitleState extends State<LnMenuGroupTitle> {
 
   @override
   void dispose() {
-    super.dispose();
-
     _menu?._unregisterTitle(this);
+    super.dispose();
   }
 
   @override
@@ -217,7 +216,7 @@ class _LnMenuGroupTitleState extends State<LnMenuGroupTitle> {
               thickness: 1,
               color: style.color?.withOpacity(.5),
             ),
-            visible: !menu.widget.replaceTitlesWithDivider,
+            visible: !menu.widget.railMode,
             child: Text(
               widget.title,
               overflow: TextOverflow.clip,
@@ -269,9 +268,8 @@ class _LnMenuItemState extends State<LnMenuItem> {
 
   @override
   void dispose() {
-    super.dispose();
-
     _menu?._unregister(this);
+    super.dispose();
   }
 
   Widget _buildTrailingBadge(
@@ -332,7 +330,7 @@ class _LnMenuItemState extends State<LnMenuItem> {
           )
         : widget.icon;
 
-    if (hasBadge && menu.widget.replaceTitlesWithDivider) {
+    if (hasBadge && menu.widget.railMode) {
       result = Badge.count(
         offset: Offset(10, -6),
         count: widget.countBadge!,
@@ -361,18 +359,14 @@ class _LnMenuItemState extends State<LnMenuItem> {
             offset: Offset(menu.widget.itemPadding.right / 2, 0),
             child: _buildTrailingBadge(
               widget.countBadge!,
-              color: selected
-                  ? theme.tonalScheme.primaryFixedDim
-                  : theme.tonalScheme.secondaryFixedDim,
-              onColor: selected
-                  ? theme.tonalScheme.onPrimaryFixedVariant
-                  : theme.tonalScheme.onSecondaryFixedVariant,
+              color: theme.tonalScheme.primary,
+              onColor: theme.tonalScheme.onPrimary,
             ),
           ),
       ],
     );
 
-    return Material(
+    result = Material(
       shape: selected
           ? menu._itemIndicatorShape
           : menu._itemIndicatorShape?.frameless,
@@ -397,5 +391,15 @@ class _LnMenuItemState extends State<LnMenuItem> {
         ),
       ),
     );
+
+    if (menu.widget.railMode) {
+      result = Tooltip(
+        message: widget.title,
+        waitDuration: Duration(milliseconds: 200),
+        child: result,
+      );
+    }
+
+    return result;
   }
 }

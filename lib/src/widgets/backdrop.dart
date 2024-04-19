@@ -189,4 +189,10 @@ class BackdropState extends State<Backdrop>
       ),
     );
   }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
 }

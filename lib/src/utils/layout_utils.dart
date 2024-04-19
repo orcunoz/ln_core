@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'dart:math' as math;
 
-import '../../ln_core.dart';
+const kVerticalSpacing = 14.0;
+const kHorizontalSpacing = 8.0;
 
 extension WidgetListExtensions<X extends Widget> on List<X> {
   List<Widget> separated([Widget separator = const Divider()]) {
@@ -18,8 +19,8 @@ extension WidgetListExtensions<X extends Widget> on List<X> {
     late Widget spacer;
     if (width == null && height == null) {
       spacer = const SizedBox(
-        width: UI.formHorizontalSpacing,
-        height: UI.formVerticalSpacing,
+        width: kHorizontalSpacing,
+        height: kVerticalSpacing,
       );
     } else {
       spacer = SizedBox(
@@ -36,40 +37,7 @@ extension WidgetListExtensions<X extends Widget> on List<X> {
   }
 }
 
-enum LayoutLevel {
-  compact(1),
-  medium(2),
-  expanded(3),
-  expandedPlus(4);
-
-  const LayoutLevel(this.value);
-
-  final int value;
-
-  bool operator <(LayoutLevel operand) => value < operand.value;
-
-  bool operator <=(LayoutLevel operand) => value <= operand.value;
-
-  bool operator >(LayoutLevel operand) => value > operand.value;
-
-  bool operator >=(LayoutLevel operand) => value >= operand.value;
-}
-
 extension MediaQueryDataExtensions on MediaQueryData {
-  bool get isCompact => layoutLevel == LayoutLevel.compact;
-  bool get isMedium => layoutLevel == LayoutLevel.medium;
-  bool get isExpanded => layoutLevel == LayoutLevel.expanded;
-  bool get isExpandedPlus => layoutLevel == LayoutLevel.expandedPlus;
-
-  bool get isExpandedOrWider => layoutLevel >= LayoutLevel.expanded;
-
-  LayoutLevel get layoutLevel => switch (size.width) {
-        < UI.compactLayoutThreshold => LayoutLevel.compact,
-        < UI.expandedLayoutThreshold => LayoutLevel.medium,
-        < UI.expandedPlusLayoutThreshold => LayoutLevel.expanded,
-        _ => LayoutLevel.expandedPlus,
-      };
-
   EdgeInsets get safePadding =>
       padding.copyWith(bottom: math.max(padding.bottom, viewInsets.bottom));
 
@@ -87,7 +55,7 @@ class SpacedColumn extends Column {
     super.verticalDirection,
     super.textBaseline,
     List<Widget> children = const <Widget>[],
-    double spacing = UI.formVerticalSpacing,
+    double spacing = kVerticalSpacing,
   }) : super(
           children: children.spaced(height: spacing),
         );
@@ -119,7 +87,7 @@ class SpacedRow extends Row {
     super.verticalDirection,
     super.textBaseline,
     List<Widget> children = const <Widget>[],
-    double spacing = UI.formHorizontalSpacing,
+    double spacing = kHorizontalSpacing,
   }) : super(children: children.spaced(width: spacing));
 }
 
@@ -142,9 +110,9 @@ class SpacedWrap extends Wrap {
     super.key,
     super.direction,
     super.alignment,
-    super.spacing = UI.formHorizontalSpacing,
+    super.spacing = kHorizontalSpacing,
     super.runAlignment,
-    super.runSpacing = UI.formVerticalSpacing,
+    super.runSpacing = kVerticalSpacing,
     super.crossAxisAlignment,
     super.textDirection,
     super.verticalDirection,
