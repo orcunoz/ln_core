@@ -1,6 +1,6 @@
 name: ln_core
 description: Ln core components and utilities
-version: 1.0.2
+version: 1.0.4
 repository: https://github.com/orcunoz/ln_core
 publish_to: none
 

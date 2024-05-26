@@ -19,7 +19,8 @@ class _MeasurableBuilderState extends State<MeasurableBuilder> {
     return Measurable(
       computedSize: size,
       onLayout: (size) {
-        if (this.size != size) {
+        if (this.size?.width != size.width ||
+            this.size?.height != size.height) {
           LnSchedulerCallbacks.endOfFrame(() => setState(() {
                 this.size = size;
               }));

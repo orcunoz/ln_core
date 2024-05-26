@@ -18,7 +18,7 @@ abstract class LnLocalizations extends LnLocalizationsBase {
   String get successful;
   String get warning;
   String get somethingWentWrong;
-  String get noResultsFound;
+  String get noResults;
   String get unauthorizedAccess;
 
   String get refresh;

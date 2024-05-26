@@ -37,7 +37,7 @@ class LocaleEn implements LnLocalizations {
   String get ok => "OK";
 
   @override
-  String get noResultsFound => "No results found!";
+  String get noResults => "No results";
 
   @override
   String get unauthorizedAccess => "Unauthorized access";

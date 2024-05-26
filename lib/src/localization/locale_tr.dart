@@ -37,7 +37,7 @@ class LocaleTr implements LnLocalizations {
   String get somethingWentWrong => 'Bir şeyler ters gitti!';
 
   @override
-  String get noResultsFound => "Hiçbir sonuç bulunamadı!";
+  String get noResults => "Sonuç yok";
 
   @override
   String get unauthorizedAccess => "Yetkisiz erişim denemesi!";

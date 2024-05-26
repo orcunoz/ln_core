@@ -7,3 +7,9 @@ extension EnumExtensions<T extends Enum> on T {
     return values[nextIndex(values)];
   }
 }
+
+extension EnumValuesExtensions<T extends Enum> on List<T> {
+  T nextOf(T? value) {
+    return this[value?.nextIndex(this) ?? 0];
+  }
+}

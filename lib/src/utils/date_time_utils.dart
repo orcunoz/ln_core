@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 extension DateTimeExtensions on DateTime {
-  ContexedDateTime of(BuildContext context) => ContexedDateTime(context, this);
+  ContexedDateTime at(BuildContext context) => ContexedDateTime(context, this);
 
   DateTime withTime(TimeOfDay time) =>
       DateTime(year, month, day, time.hour, time.minute);

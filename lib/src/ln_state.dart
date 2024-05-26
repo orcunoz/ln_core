@@ -8,40 +8,32 @@ import 'package:ln_core/ln_core.dart';
 abstract class LnContextDependentsGetters {
   ThemeData get theme;
   MediaQueryData get mediaQuery;
-  LayoutLevel get layoutLevel;
   FlutterView get view;
   TextDirection get textDirection;
   DividerBorders get dividerBorders;
 }
 
-mixin class _LnContextDependents implements LnContextDependentsGetters {
-  BuildContext? __context;
+final class LnContextDependents implements LnContextDependentsGetters {
+  LnContextDependents(BuildContext context) : _context = context;
+  LnContextDependents._() : _context = null;
 
-  BuildContext get _context {
-    assert(__context != null);
-    return __context!;
-  }
+  BuildContext? _context;
 
   @override
-  ThemeData get theme => _theme ??= Theme.of(_context);
+  ThemeData get theme => _theme ??= Theme.of(_context!);
   ThemeData? _theme;
 
   @override
-  MediaQueryData get mediaQuery => _mediaQuery ??= MediaQuery.of(_context);
+  MediaQueryData get mediaQuery => _mediaQuery ??= MediaQuery.of(_context!);
   MediaQueryData? _mediaQuery;
 
   @override
-  LayoutLevel get layoutLevel =>
-      _layoutLevel ??= theme.appLayout.levelOf(mediaQuery);
-  LayoutLevel? _layoutLevel;
-
-  @override
-  FlutterView get view => _view ??= View.of(_context);
+  FlutterView get view => _view ??= View.of(_context!);
   FlutterView? _view;
 
   @override
   TextDirection get textDirection =>
-      _textDirection ??= Directionality.maybeOf(_context) ?? TextDirection.ltr;
+      _textDirection ??= Directionality.maybeOf(_context!) ?? TextDirection.ltr;
   TextDirection? _textDirection;
 
   @override
@@ -50,26 +42,22 @@ mixin class _LnContextDependents implements LnContextDependentsGetters {
   DividerBorders? _dividerBorders;
 
   @mustCallSuper
-  void resetContextDependents(BuildContext context) {
-    __context = context;
+  void _resetContextDependents(BuildContext context) {
+    _context = context;
     _theme = null;
     _mediaQuery = null;
-    _layoutLevel = null;
     _view = null;
     _textDirection = null;
     _dividerBorders = null;
   }
 }
 
-abstract mixin class LnImmutableContextDependents
+abstract mixin class LnContextDependentsMixin
     implements LnContextDependentsGetters {
   LnContextDependentsGetters get contextDependents;
 
   @override
   ThemeData get theme => contextDependents.theme;
-
-  @override
-  LayoutLevel get layoutLevel => contextDependents.layoutLevel;
 
   @override
   MediaQueryData get mediaQuery => contextDependents.mediaQuery;
@@ -85,31 +73,32 @@ abstract mixin class LnImmutableContextDependents
 }
 
 class LnContextDependentsWidget extends StatelessWidget
-    with LnImmutableContextDependents {
+    with LnContextDependentsMixin {
   LnContextDependentsWidget({super.key});
 
-  final _LnContextDependents _contextDependents = _LnContextDependents();
-
   @override
-  LnContextDependentsGetters get contextDependents => _contextDependents;
+  final LnContextDependents contextDependents = LnContextDependents._();
 
   static const _emptyWidget = UnusableWidget();
 
   @mustCallSuper
   @override
   Widget build(BuildContext context) {
-    _contextDependents.resetContextDependents(context);
+    contextDependents._resetContextDependents(context);
     return _emptyWidget;
   }
 }
 
 abstract class LnContextDependentsState<W extends StatefulWidget>
-    extends State<W> with _LnContextDependents {
+    extends State<W> with LnContextDependentsMixin {
+  @override
+  final LnContextDependents contextDependents = LnContextDependents._();
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    resetContextDependents(context);
+    contextDependents._resetContextDependents(context);
   }
 }
 
@@ -150,7 +139,7 @@ mixin LnStateSchedulerCallbacks<W extends StatefulWidget> on State<W> {
         callback == null
             ? null
             : () => !mounted
-                ? Log.i(
+                ? Log.w(
                     "Callback could not be called. "
                     "Because state($runtimeType) is not mounted",
                   )

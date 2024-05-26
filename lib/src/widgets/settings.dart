@@ -1,68 +1,59 @@
 import 'package:flutter/material.dart';
 import 'package:ln_core/ln_core.dart';
 
-const _kRowPadding = EdgeInsets.all(16);
+const _kRowInsets = EdgeInsets.all(16);
+const _kGroupPadding = EdgeInsets.all(6.0);
 
-BorderRadius _resolveRowBorderRadius(ThemeData theme) {
-  return theme.cardTheme.shape?.borderRadius?.resolve(TextDirection.ltr) ??
-      BorderRadius.circular(4);
+class SettingsGroupTitle extends StatelessWidget {
+  const SettingsGroupTitle(this.title);
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: _kRowInsets.copyWith(top: 0, bottom: 0),
+        child: Text(
+          title,
+          style: theme.textTheme.labelMedium!.copyWith(
+            color: theme.colorScheme.primary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class SettingsGroup extends StatelessWidget {
   const SettingsGroup({
     super.key,
-    this.title,
     required this.rows,
     this.elevation = 1,
   });
 
-  final String? title;
   final List<Widget> rows;
   final double elevation;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final rowBorderRadius = _resolveRowBorderRadius(theme);
-    final surfaceColor = theme.surfaces.frontSurfaceColor;
+    final borderRadius = SettingsRow.resolveBorderRadius(theme);
 
-    Widget result = LnSurface(
-      LnSurfaceDecoration(color: surfaceColor),
-      child: Padding(
-        padding: const EdgeInsets.all(6.0),
-        child: SeparatedColumn(
-          separator: PrecisionDivider(
-            indent: rowBorderRadius.topLeft.x,
-            endIndent: rowBorderRadius.topRight.x,
-            color: theme.borderColor(surfaceColor, sharpness: 4),
-          ),
-          children: rows,
+    return Padding(
+      padding: _kGroupPadding,
+      child: SeparatedColumn(
+        separator: PrecisionDivider(
+          indent: borderRadius.topLeft.x,
+          endIndent: borderRadius.topRight.x,
+          color: theme.colorScheme.onSurfaceVariant.withOpacityFactor(.2),
         ),
+        children: rows,
       ),
     );
-
-    if (title != null) {
-      result = Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: _kRowPadding.copyWith(top: 0, bottom: 0) +
-                const EdgeInsets.only(bottom: 4),
-            child: Text(
-              title!,
-              style: theme.textTheme.labelLarge!.copyWith(
-                color: theme.colorScheme.primary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          Flexible(child: result),
-        ],
-      );
-    }
-
-    return result;
   }
 }
 
@@ -87,6 +78,16 @@ class SettingsRow extends StatelessWidget {
   })  : trailingIcon = Icons.keyboard_arrow_right_rounded,
         assert(trailing == null || trailingText == null);
 
+  const SettingsRow.custom({
+    super.key,
+    required this.titleText,
+    required this.leadingIcon,
+    required Widget child,
+  })  : trailing = child,
+        trailingIcon = null,
+        trailingText = null,
+        onPressed = null;
+
   final String titleText;
   final IconData leadingIcon;
   final String? trailingText;
@@ -94,38 +95,47 @@ class SettingsRow extends StatelessWidget {
   final IconData? trailingIcon;
   final Function()? onPressed;
 
+  static BorderRadius resolveBorderRadius(ThemeData theme) =>
+      theme.cardTheme.shape?.borderRadius?.resolve(TextDirection.ltr) ??
+      BorderRadius.circular(6);
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final borderRadius = _resolveRowBorderRadius(theme);
     final variantColor = theme.colorScheme.onSurfaceVariant;
+    final borderRadius = resolveBorderRadius(theme);
 
-    return InkWell(
-      onTap: onPressed,
+    return Material(
+      type: MaterialType.transparency,
       borderRadius: borderRadius,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: kMinInteractiveDimension),
-        child: Padding(
-          padding: _kRowPadding,
-          child: Row(
-            children: [
-              Icon(leadingIcon, color: variantColor, size: 22),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  titleText,
-                  style: theme.textTheme.bodyMedium?.apply(fontSizeFactor: 1.1),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: borderRadius,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: kMinInteractiveDimension),
+          child: Padding(
+            padding: _kRowInsets - _kGroupPadding,
+            child: Row(
+              children: [
+                Icon(leadingIcon, color: variantColor),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    titleText,
+                    style:
+                        theme.textTheme.bodyMedium?.apply(fontSizeFactor: 1.1),
+                  ),
                 ),
-              ),
-              if (trailing != null || trailingText != null)
-                DefaultTextStyle(
-                  style: (theme.textTheme.bodyMedium ?? const TextStyle())
-                      .copyWith(color: variantColor),
-                  child: trailing ?? Text(trailingText!),
-                ),
-              if (trailingIcon != null)
-                Icon(trailingIcon, color: variantColor, size: 22),
-            ],
+                if (trailing != null || trailingText != null)
+                  DefaultTextStyle(
+                    style: (theme.textTheme.bodyMedium ?? const TextStyle())
+                        .copyWith(color: variantColor),
+                    child: trailing ?? Text(trailingText!),
+                  ),
+                if (trailingIcon != null)
+                  Icon(trailingIcon, color: variantColor),
+              ],
+            ),
           ),
         ),
       ),

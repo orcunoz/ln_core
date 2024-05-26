@@ -1,7 +1,17 @@
+import 'dart:ui';
+
+import 'package:flutter/scheduler.dart';
+import 'package:flutter/widgets.dart';
 import 'package:universal_platform/universal_platform.dart';
 
 abstract class LnPlatform {
   const LnPlatform._();
+
+  static Brightness get brightness =>
+      SchedulerBinding.instance.platformDispatcher.platformBrightness;
+
+  static Brightness brightnessOf(BuildContext context) =>
+      View.of(context).platformDispatcher.platformBrightness;
 
   static bool get isWeb => UniversalPlatform.isWeb;
   static bool get isMacOS => UniversalPlatform.isMacOS;

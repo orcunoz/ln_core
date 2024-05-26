@@ -8,6 +8,8 @@ export 'src/localization/localizations.dart';
 
 export 'src/utils/styling/borders.dart';
 export 'src/utils/styling/colors.dart';
+export 'src/utils/styling/corners.dart';
+export 'src/utils/styling/theme_extensions.dart';
 export 'src/utils/styling/theme.dart';
 export 'src/utils/styling/tonal_theme.dart';
 export 'src/utils/styling/layout.dart';
@@ -31,6 +33,8 @@ export 'src/utils/sorted_list.dart';
 export 'src/utils/string_utils.dart';
 export 'src/utils/throttle_debounce.dart';
 
+export 'src/widgets/layouts/list_detail_layout.dart';
+export 'src/widgets/layouts/supporting_pane_layout.dart';
 export 'src/widgets/animated_slide_shrink.dart';
 export 'src/widgets/app_restarter.dart';
 export 'src/widgets/backdrop.dart';
@@ -39,6 +43,7 @@ export 'src/widgets/bottom_sheet.dart';
 export 'src/widgets/clean_area_and_darkened_outside.dart';
 export 'src/widgets/color_palette.dart';
 export 'src/widgets/copyable_card.dart';
+export 'src/widgets/debug_area_bounds.dart';
 export 'src/widgets/dots_indicator.dart';
 export 'src/widgets/elevated_image.dart';
 export 'src/widgets/glass_card.dart';
@@ -55,7 +60,6 @@ export 'src/widgets/progress_indicator_icon.dart';
 export 'src/widgets/progress_indicator_widget.dart';
 export 'src/widgets/settings.dart';
 export 'src/widgets/sieve_area.dart';
-export 'src/widgets/sliding_drawer.dart';
 export 'src/widgets/sliding_drawers_area.dart';
 export 'src/widgets/unusable_widget.dart';
 export 'src/widgets/sliver_flexible_header_delegate.dart';
@@ -65,7 +69,7 @@ export 'src/widgets/window_icons.dart';
 export 'src/widgets/search/search_text_box.dart';
 export 'src/widgets/search/searchable_scope.dart';
 
-export 'src/models/wrapped.dart';
+export 'src/models/value.dart';
 
 export 'package:window_manager/window_manager.dart';
 

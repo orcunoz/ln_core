@@ -32,12 +32,19 @@ class DebouncedAction {
   final Duration duration;
   Timer? _timer;
 
+  bool get debounced => _timer != null;
+
+  void _runAction() {
+    _timer = null;
+    action();
+  }
+
   void invoke() {
     if (duration == Duration.zero) {
-      action();
+      _runAction();
     } else {
       _timer?.cancel();
-      _timer = Timer(duration, action);
+      _timer = Timer(duration, _runAction);
     }
   }
 }

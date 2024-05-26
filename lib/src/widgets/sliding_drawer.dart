@@ -1,14 +1,10 @@
-import 'dart:ui';
-
-import 'package:flutter/material.dart';
-import 'package:ln_core/ln_core.dart';
-
-import 'dart:math' as math;
+part of 'sliding_drawers_area.dart';
 
 const kSlidingDrawersAnimationDuration = Duration(milliseconds: 300);
+const kSlidingDrawersAnimationCurve = Curves.easeInOut;
 
-typedef SlideTransitionBuilder = Widget Function(
-    BuildContext context, SlidingDrawerPosition position, Widget child);
+typedef DrawerFrameBuilder = Widget Function(
+    BuildContext context, SlidingDrawerTranslation position, Widget child);
 
 class LimitedRange {
   const LimitedRange({this.min, this.max})
@@ -76,127 +72,167 @@ class ReverseSlidingDrawer extends SlidingDrawer {
   State<SlidingDrawer> createState() => _ReverseSlidingDrawerState();
 }
 
+enum DrawerOnScrollBehavior {
+  slide,
+  stayBelow,
+}
+
 class SlidingDrawer extends StatefulWidget {
-  SlidingDrawer({
+  SlidingDrawer.pinned({
     super.key,
-    this.pinnedOffset,
-    this.snap = true,
     this.slideLimits,
     this.heightLimits,
-    int slidePriority = 1,
     required this.slideDirection,
     this.onScrollableBounds = false,
+    this.behavior = DrawerOnScrollBehavior.slide,
     this.frameBuilder,
     this.child,
-  }) : slidePriority = pinnedOffset != null
-            ? NumberUtils.maxInt
-            : slidePriority >= NumberUtils.maxInt
-                ? NumberUtils.maxInt - 1
-                : slidePriority;
+  })  : pinned = true,
+        snap = false,
+        slidePriority = NumberUtils.maxInt;
+
+  SlidingDrawer({
+    super.key,
+    this.snap = false,
+    this.slideLimits,
+    this.heightLimits,
+    this.slidePriority = 1,
+    required this.slideDirection,
+    this.onScrollableBounds = false,
+    this.behavior = DrawerOnScrollBehavior.slide,
+    this.frameBuilder,
+    this.child,
+  })  : pinned = false,
+        assert(slidePriority < NumberUtils.maxInt);
 
   SlidingDrawer._reverse({
     super.key,
+    this.behavior = DrawerOnScrollBehavior.slide,
     this.frameBuilder,
     this.child,
   })  : snap = false,
         onScrollableBounds = false,
         slideDirection = null,
-        pinnedOffset = null,
+        pinned = false,
         heightLimits = null,
         slideLimits = null,
         slidePriority = 1;
 
   final bool onScrollableBounds;
   final bool snap;
-  final double? pinnedOffset;
+  final bool pinned;
   final LimitedRange? slideLimits;
   final LimitedRange? heightLimits;
   final int slidePriority;
+  final DrawerOnScrollBehavior behavior;
   final VerticalDirection? slideDirection;
-  final SlideTransitionBuilder? frameBuilder;
+  final DrawerFrameBuilder? frameBuilder;
   final Widget? child;
 
   @override
   State<SlidingDrawer> createState() => _SlidingDrawerState();
 }
 
+abstract class SlidingDrawerTranslation {
+  SlidingDrawerBounds? get bounds;
+  double get slideAmount;
+  double get slideableLength;
+  double get minHeight;
+  double get maxHeight;
+  double get transition;
+  double get reverseTransition;
+}
+
 abstract class SlidingDrawerState extends LnState<SlidingDrawer>
-    implements SlidingDrawerActions {
-  double slideRelativeOffset = 0;
+    implements SlidingDrawerActions, SlidingDrawerTranslation {
+  double? relativeOffset;
+
   bool get isReverse => this is _ReverseSlidingDrawerState;
 
   int get priority => widget.slidePriority;
   bool get onScrollableBounds => widget.onScrollableBounds;
 
-  final _positionNotifier = ValueNotifier<SlidingDrawerPosition>(
-      SlidingDrawerPosition(visibleHeight: 0));
-  Listenable get listenable => _positionNotifier;
+  final _visibleHeightNotifier = ValueNotifier<double>(0);
+  ValueListenable<double> get visibleHeightListenable => _visibleHeightNotifier;
+  double get visibleHeight => _visibleHeightNotifier.value;
 
-  SlidingDrawerPosition get position => _positionNotifier.value;
-  set position(SlidingDrawerPosition value) => _positionNotifier.value = value;
+  final _boundsNotifier = ValueNotifier<SlidingDrawerBounds?>(null);
+  ValueListenable<SlidingDrawerBounds?> get boundsListenable => _boundsNotifier;
 
-  void setPosition({
-    SlidingDrawerBounds? bounds,
-    double? visibleHeight,
-    bool? slidingToForward,
-    bool? atStart,
-  }) {
-    position = position.copyWith(
-      bounds: bounds,
-      visibleHeight: visibleHeight,
-      slidingToForward: slidingToForward,
-      atStart: atStart,
-    );
+  @override
+  SlidingDrawerBounds? get bounds => _boundsNotifier.value;
+
+  late final Listenable positionListenable = Listenable.merge([
+    _visibleHeightNotifier,
+    _boundsNotifier,
+  ]);
+
+  double? _pinnedOffset;
+  set pinnedOffset(double value) {
+    _pinnedOffset = value;
   }
+
+  double get pinnedOffset => _pinnedOffset ?? .0;
 
   Size? _measuredSize;
   SlidingDrawers? _area;
 
   VerticalDirection? slideDirection;
 
+  @override
+  double get slideAmount =>
+      bounds == null ? 0 : bounds!.maxHeight - visibleHeight;
+
+  @override
+  double get slideableLength => bounds?.maxSlide ?? 0;
+
+  @override
+  double get minHeight => bounds?.minHeight ?? .0;
+
+  @override
+  double get maxHeight => bounds?.maxHeight ?? .0;
+
+  @override
+  double get transition {
+    if (bounds != null && slideableLength > 0) {
+      return (slideAmount / slideableLength).clamp(0, 1);
+    }
+    return 0;
+  }
+
+  @override
+  double get reverseTransition {
+    return 1 - transition;
+  }
+
   SlidingDrawerBounds? _calculateBounds(double? measuredHeight);
 
   void setSlidePosition({double? slide, double? height, double? transition});
 
   void _recalculateBounds() {
-    final previousSlide = position.slideAmount;
+    final previousSlide = slideAmount;
 
-    setPosition(bounds: _calculateBounds(_measuredSize?.height));
+    _boundsNotifier.value = _calculateBounds(_measuredSize?.height);
     setSlidePosition(slide: previousSlide);
   }
 
-  double handleScroll(double offset, double change) {
-    if (change == 0) return 0;
-
-    double sign = switch (widget.slideDirection!) {
+  double handleScroll(double change) {
+    double sign = switch (slideDirection!) {
       VerticalDirection.up => 1.0,
       VerticalDirection.down => -1.0,
     };
 
-    bool slidingToForward = sign == change.sign;
-    bool atStart = offset == 0;
+    final previousSlide = slideAmount;
+    double? newVisibleHeight;
 
-    if (isReverse) {
-      setPosition(
-        atStart: atStart,
-        slidingToForward: slidingToForward,
-      );
-      return 0;
-    } else {
-      final previousSlide = position.slideAmount;
-
-      final double newSlide = widget.pinnedOffset != null
-          ? (offset - slideRelativeOffset).clamp(0, double.infinity)
-          : previousSlide + change * sign;
-
-      setPosition(
-        atStart: atStart,
-        slidingToForward: slidingToForward,
-        visibleHeight: position.bounds?.normalizedHeightOf(slide: newSlide),
-      );
-
-      return (position.slideAmount - previousSlide) * sign;
+    if (!isReverse) {
+      final double newSlide = previousSlide + change * sign;
+      newVisibleHeight = bounds?.normalizedHeightOf(slide: newSlide);
     }
+
+    setSlidePosition(height: newVisibleHeight);
+
+    return (slideAmount - previousSlide) * sign;
   }
 
   void _refreshRegistration({bool force = false}) {
@@ -238,12 +274,16 @@ abstract class SlidingDrawerState extends LnState<SlidingDrawer>
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    _refreshRegistration();
+    if (this is! _ReverseSlidingDrawerState ||
+        (this as _ReverseSlidingDrawerState).reverseController != null) {
+      _refreshRegistration();
+    }
   }
 
   @override
   void dispose() {
-    _positionNotifier.dispose();
+    _boundsNotifier.dispose();
+    _visibleHeightNotifier.dispose();
 
     _area?.unregister(this);
     _area = null;
@@ -251,11 +291,13 @@ abstract class SlidingDrawerState extends LnState<SlidingDrawer>
   }
 
   Widget _buildChild() {
+    bool topDrawer = slideDirection == VerticalDirection.up;
+    bool slideBehavior = widget.behavior == DrawerOnScrollBehavior.slide;
+
     return UnconstrainedBox(
-      alignment: switch (slideDirection) {
-        VerticalDirection.up => Alignment.bottomCenter,
-        _ => Alignment.topCenter,
-      },
+      alignment: topDrawer ^ !slideBehavior
+          ? Alignment.bottomCenter
+          : Alignment.topCenter,
       clipBehavior: Clip.hardEdge,
       constrainedAxis: Axis.horizontal,
       child: Measurable(
@@ -276,12 +318,11 @@ abstract class SlidingDrawerState extends LnState<SlidingDrawer>
   Widget build(BuildContext context) {
     return ClipRRect(
       child: ListenableBuilder(
-        listenable: listenable,
+        listenable: positionListenable,
         builder: (context, child) {
           return SizedBox(
-            height: position.visibleHeight,
-            child:
-                widget.frameBuilder?.call(context, position, child!) ?? child!,
+            height: visibleHeight,
+            child: widget.frameBuilder?.call(context, this, child!) ?? child!,
           );
         },
         child: _buildChild(),
@@ -290,49 +331,54 @@ abstract class SlidingDrawerState extends LnState<SlidingDrawer>
   }
 
   @override
-  void close({Duration? duration = kSlidingDrawersAnimationDuration}) {
-    slideTo(double.infinity, duration: duration);
+  void close({
+    Duration? duration = kSlidingDrawersAnimationDuration,
+    Curve? curve = kSlidingDrawersAnimationCurve,
+  }) {
+    slideTo(double.infinity, duration: duration, curve: curve);
   }
 
   @override
-  void open({Duration? duration = kSlidingDrawersAnimationDuration}) {
-    slideTo(0, duration: duration);
+  void open({
+    Duration? duration = kSlidingDrawersAnimationDuration,
+    Curve? curve = kSlidingDrawersAnimationCurve,
+  }) {
+    slideTo(0, duration: duration, curve: curve);
   }
 }
 
 class _ReverseSlidingDrawerState extends SlidingDrawerState {
   @override
   ReverseSlidingDrawer get widget => super.widget as ReverseSlidingDrawer;
-  SlidingDrawerState get reverseController => widget.reverseOf.currentState!;
+  SlidingDrawerState? get reverseController => widget.reverseOf.currentState;
 
-  double? _convertVisibleHeightToReverse(double? height) => height == null ||
-          position.bounds == null ||
-          reverseController.position.bounds == null
-      ? null
-      : reverseController.position.maxHeight -
-          (height - position.bounds!.minHeight);
+  double? _convertVisibleHeightToReverse(double? height) =>
+      height == null || bounds == null || reverseController?.bounds == null
+          ? null
+          : reverseController!.maxHeight - (height - bounds!.minHeight);
 
   @override
-  void slideTo(double value, {Duration? duration}) {
-    reverseController.slideTo(
-      position.slideableLength - value,
+  void slideTo(double value, {Duration? duration, Curve? curve}) {
+    reverseController?.slideTo(
+      slideableLength - value,
       duration: duration,
+      curve: curve,
     );
   }
 
   void _syncReverseDrawer(SlidingDrawerState reverseDrawer) {
-    reverseDrawer.listenable.addListener(_handleReverseSlide);
+    reverseDrawer.positionListenable.addListener(_handleReverseSlide);
     _recalculateBounds();
   }
 
   void _unsyncReverseDrawer(SlidingDrawerState reverseDrawer) {
-    reverseDrawer.listenable.addListener(_handleReverseSlide);
+    reverseDrawer.positionListenable.addListener(_handleReverseSlide);
     _recalculateBounds();
   }
 
   @override
   void setSlidePosition({double? slide, double? height, double? transition}) {
-    final visibleHeight = position.bounds?.normalizedHeightOf(
+    final visibleHeight = bounds?.normalizedHeightOf(
       slide: slide,
       height: height,
       transition: transition,
@@ -341,22 +387,21 @@ class _ReverseSlidingDrawerState extends SlidingDrawerState {
     final reverseHeight = _convertVisibleHeightToReverse(visibleHeight);
 
     if (reverseHeight != null) {
-      reverseController.setSlidePosition(height: reverseHeight);
+      reverseController?.setSlidePosition(height: reverseHeight);
     }
   }
 
   void _handleReverseSlide() {
-    setPosition(
-      visibleHeight: position.bounds?.normalizedHeightOf(
-          height: position.bounds!.minHeight +
-              reverseController.position.slideAmount),
+    setSlidePosition(
+      height: bounds?.normalizedHeightOf(
+          height: bounds!.minHeight + (reverseController?.slideAmount ?? 0)),
     );
   }
 
   @override
   SlidingDrawerBounds? _calculateBounds(double? measuredHeight) {
-    if (reverseController.position.bounds == null) return null;
-    final reverseBounds = reverseController.position.bounds!;
+    if (reverseController?.bounds == null) return null;
+    final reverseBounds = reverseController!.bounds!;
     measuredHeight ??= reverseBounds.maxHeight;
 
     final additionalHeight =
@@ -369,10 +414,11 @@ class _ReverseSlidingDrawerState extends SlidingDrawerState {
   }
 
   @override
-  void initState() {
-    super.initState();
+  void afterLayout() {
+    super.afterLayout();
 
-    _syncReverseDrawer(reverseController);
+    _refreshRegistration();
+    _syncReverseDrawer(reverseController!);
   }
 
   @override
@@ -386,7 +432,7 @@ class _ReverseSlidingDrawerState extends SlidingDrawerState {
 
   @override
   void dispose() {
-    _unsyncReverseDrawer(reverseController);
+    if (reverseController != null) _unsyncReverseDrawer(reverseController!);
     super.dispose();
   }
 }
@@ -397,16 +443,33 @@ class _SlidingDrawerState extends SlidingDrawerState
   Animation<double>? _slideAnimation;
 
   @override
-  void slideTo(double value, {Duration? duration}) {
+  double handleScroll(double change) {
+    _cancelAnimation();
+    return super.handleScroll(change);
+  }
+
+  void _cancelAnimation() {
     _slideAnimation?.removeListener(_handleAnimationUpdate);
+  }
+
+  @override
+  void slideTo(double value, {Duration? duration, Curve? curve}) {
+    _cancelAnimation();
+
     if (duration == null) {
       setSlidePosition(slide: value);
     } else {
+      Animation<double> parent = _animationController;
+      if (curve != null) {
+        parent = CurvedAnimation(parent: parent, curve: curve);
+      }
+
       _slideAnimation = Tween<double>(
-        begin: position.slideAmount,
-        end: value.clamp(0, position.slideableLength),
-      ).animate(_animationController)
+        begin: slideAmount,
+        end: value.clamp(0, slideableLength),
+      ).animate(parent)
         ..addListener(_handleAnimationUpdate);
+
       _animationController
         ..duration = duration
         ..forward(from: 0);
@@ -424,23 +487,28 @@ class _SlidingDrawerState extends SlidingDrawerState
 
   @override
   void dispose() {
+    _slideAnimation?.removeListener(_handleAnimationUpdate);
     _animationController.dispose();
     super.dispose();
   }
 
   @override
   void setSlidePosition({double? slide, double? height, double? transition}) {
-    setPosition(
-      visibleHeight: position.bounds?.normalizedHeightOf(
-        slide: slide,
-        height: height,
-        transition: transition,
-      ),
+    final newVisibleHeight = bounds?.normalizedHeightOf(
+      slide: slide,
+      height: height,
+      transition: transition,
     );
+
+    if (newVisibleHeight != visibleHeight) {
+      _visibleHeightNotifier.value = newVisibleHeight ?? 0;
+    }
   }
 
   void _handleAnimationUpdate() {
-    setSlidePosition(slide: _slideAnimation!.value);
+    if (_slideAnimation != null) {
+      setSlidePosition(slide: _slideAnimation!.value);
+    }
   }
 
   @override
@@ -494,71 +562,7 @@ abstract class SlidingDrawerActions {
 
   void close({Duration? duration = kSlidingDrawersAnimationDuration});
 
-  void slideTo(double value, {Duration? duration});
-}
-
-class SlidingDrawerPosition {
-  const SlidingDrawerPosition({
-    this.bounds,
-    required this.visibleHeight,
-    this.slidingToForward,
-    this.atStart,
-  });
-
-  final SlidingDrawerBounds? bounds;
-  final double visibleHeight;
-  final bool? slidingToForward;
-  final bool? atStart;
-
-  double get slideAmount =>
-      bounds == null ? 0 : bounds!.maxHeight - visibleHeight;
-
-  double get slideableLength => bounds?.maxSlide ?? 0;
-
-  double get maxHeight => bounds?.maxHeight ?? .0;
-
-  double get transition {
-    if (bounds != null && slideableLength > 0) {
-      return (slideAmount / slideableLength).clamp(0, 1);
-    }
-    return 0;
-  }
-
-  double get reverseTransition {
-    return 1 - transition;
-  }
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) {
-      return true;
-    }
-    if (other.runtimeType != runtimeType) {
-      return false;
-    }
-    return other is SlidingDrawerPosition &&
-        other.bounds == bounds &&
-        other.visibleHeight == visibleHeight &&
-        other.slidingToForward == slidingToForward &&
-        other.atStart == atStart;
-  }
-
-  @override
-  int get hashCode => Object.hash(bounds, visibleHeight, slidingToForward);
-
-  SlidingDrawerPosition copyWith({
-    SlidingDrawerBounds? bounds,
-    double? visibleHeight,
-    bool? slidingToForward,
-    bool? atStart,
-  }) {
-    return SlidingDrawerPosition(
-      bounds: bounds ?? this.bounds,
-      visibleHeight: visibleHeight ?? this.visibleHeight,
-      slidingToForward: slidingToForward ?? this.slidingToForward,
-      atStart: atStart ?? this.atStart,
-    );
-  }
+  void slideTo(double value, {Duration? duration, Curve? curve});
 }
 
 class SlidingDrawerBounds {

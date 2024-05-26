@@ -89,10 +89,11 @@ extension ShapeBorderExtensions on ShapeBorder {
   }
 
   ShapeBorder copyWithBorderRadius(
-      {BorderSide? borderSide, BorderRadius? borderRadius}) {
+      {BorderSide? borderSide, BorderRadiusGeometry? borderRadius}) {
     if (this is InputBorder) {
-      return (this as InputBorder)
-          .copyWithBorderRadius(side: borderSide, borderRadius: borderRadius);
+      return (this as InputBorder).copyWithBorderRadius(
+          side: borderSide,
+          borderRadius: borderRadius?.resolve(TextDirection.ltr));
     } else if (this is OutlinedBorder) {
       return (this as OutlinedBorder)
           .copyWithBorderRadius(side: borderSide, borderRadius: borderRadius);

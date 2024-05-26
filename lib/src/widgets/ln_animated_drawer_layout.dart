@@ -1,4 +1,6 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 import 'package:ln_core/ln_core.dart';
@@ -6,7 +8,7 @@ import 'package:ln_core/ln_core.dart';
 enum _AnimationsLevel {
   compact(1),
   mediumExpanded(2),
-  expandedPlus(3);
+  large(3);
 
   const _AnimationsLevel(this.value);
 
@@ -15,7 +17,7 @@ enum _AnimationsLevel {
         LayoutLevel.medium ||
         LayoutLevel.expanded =>
           _AnimationsLevel.mediumExpanded,
-        LayoutLevel.expandedPlus => _AnimationsLevel.expandedPlus,
+        LayoutLevel.large => _AnimationsLevel.large,
       };
 
   final int value;
@@ -34,10 +36,16 @@ class LnAnimatedDrawerLayout extends StatefulWidget {
     super.key,
     required this.expandedDrawerWidth,
     required this.shrinkedDrawerWidth,
-    this.scaleEffectFactor = 0.90,
+    this.scaleEffectFactor = 0.9,
     this.rtlOpening = false,
     this.disabledGestures = false,
     this.controller,
+    this.safeLeft = true,
+    this.safeTop = true,
+    this.safeRight = true,
+    this.safeBottom = true,
+    required this.backdropColor,
+    required this.backdropPadding,
     required this.drawer,
     required this.child,
   });
@@ -47,6 +55,12 @@ class LnAnimatedDrawerLayout extends StatefulWidget {
   final double scaleEffectFactor;
   final bool rtlOpening;
   final bool disabledGestures;
+  final bool safeLeft;
+  final bool safeTop;
+  final bool safeRight;
+  final bool safeBottom;
+  final Color backdropColor;
+  final EdgeInsets? backdropPadding;
 
   final LnAnimatedDrawerController? controller;
   final Widget drawer;
@@ -68,7 +82,7 @@ class _LnAnimatedDrawerLayoutState extends LnState<LnAnimatedDrawerLayout>
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    final level = _AnimationsLevel.from(layoutLevel);
+    final level = _AnimationsLevel.from(mediaQuery.layoutLevel);
     controller._setAnimationsLevel(level);
   }
 
@@ -82,7 +96,7 @@ class _LnAnimatedDrawerLayoutState extends LnState<LnAnimatedDrawerLayout>
       if (widget.controller == null) {
         _localController = LnAnimatedDrawerController(
           vsync: this,
-          initialLayoutLevel: layoutLevel,
+          initialLayoutLevel: mediaQuery.layoutLevel,
         );
       } else {
         _localController!.dispose();
@@ -100,7 +114,7 @@ class _LnAnimatedDrawerLayoutState extends LnState<LnAnimatedDrawerLayout>
     if (widget.controller == null) {
       _localController = LnAnimatedDrawerController(
         vsync: this,
-        initialLayoutLevel: layoutLevel,
+        initialLayoutLevel: mediaQuery.layoutLevel,
       );
     }
 
@@ -117,7 +131,7 @@ class _LnAnimatedDrawerLayoutState extends LnState<LnAnimatedDrawerLayout>
     onTap() => switch (controller._animationsLevel) {
           _AnimationsLevel.mediumExpanded => controller.shrink(),
           _AnimationsLevel.compact => controller.hide(),
-          _AnimationsLevel.expandedPlus => ()
+          _AnimationsLevel.large => ()
         };
 
     return ValueListenableBuilder<LnDrawerLayoutState>(
@@ -126,41 +140,36 @@ class _LnAnimatedDrawerLayoutState extends LnState<LnAnimatedDrawerLayout>
         bool overlayEnabled = switch (controller._animationsLevel) {
           _AnimationsLevel.compact => !value.hidden,
           _AnimationsLevel.mediumExpanded => !value.shrinked,
-          _AnimationsLevel.expandedPlus => false,
+          _AnimationsLevel.large => false,
         };
         return Offstage(
           offstage: !overlayEnabled,
           child: overlay,
         );
       },
-      child: switch (widget.scaleEffectFactor) {
-        /*1 => GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onPanDown: (details) => onTap(),
-          ),*/
-        _ => Material(
-            type: MaterialType.transparency,
-            child: InkWell(
-              //borderRadius: theme.surfaces.borderRadius,
-              onTap: onTap,
-            ),
-          ),
-      },
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          hoverColor: widget.backdropColor.withOpacityFactor(.3),
+          splashColor: widget.backdropColor.withOpacityFactor(.3),
+          onTap: onTap,
+        ),
+      ),
     );
   }
 
   Widget _buildChild(BuildContext context, TextDirection direction) {
     final scaleAnimation = switch (controller._animationsLevel) {
-      < _AnimationsLevel.expandedPlus => Tween<double>(
-          begin: 1.0,
-          end: widget.scaleEffectFactor,
+      < _AnimationsLevel.large => Tween<double>(
+          begin: widget.scaleEffectFactor,
+          end: 1.0,
         ).animate(controller._animationsLevel == _AnimationsLevel.compact
             ? controller.hideAnimation
             : controller.shrinkAnimation),
       _ => AlwaysStoppedAnimation(1.0),
     };
 
-    Animation<RelativeRect> positionAnimation(double hideTransition) {
+    /*Animation<RelativeRect> positionAnimation(double hideTransition) {
       final reverseTransition = 1 - hideTransition;
       final shrinkedStart = widget.shrinkedDrawerWidth * reverseTransition;
       final expandedStart = widget.expandedDrawerWidth * reverseTransition;
@@ -189,18 +198,41 @@ class _LnAnimatedDrawerLayoutState extends LnState<LnAnimatedDrawerLayout>
           },
         ),
       ).animate(controller.shrinkAnimation);
-    }
+    }*/
 
     return AnimatedBuilder(
       animation: controller.hideAnimation,
       builder: (context, child) {
-        return PositionedTransition(
-          rect: positionAnimation(controller.hideAnimation.value),
-          child: child!,
+        final hideTransition = controller.hideAnimation.value;
+        final shrinkedStart = widget.shrinkedDrawerWidth * (1 - hideTransition);
+        final expandedStart = widget.expandedDrawerWidth * (1 - hideTransition);
+        return AnimatedBuilder(
+          animation: controller.shrinkAnimation,
+          builder: (context, child) {
+            final shrinkTransition = controller.shrinkAnimation.value;
+
+            return Positioned.directional(
+              textDirection: direction,
+              start: lerpDouble(expandedStart, shrinkedStart, shrinkTransition),
+              end: switch (controller._animationsLevel) {
+                _AnimationsLevel.compact =>
+                  lerpDouble(-expandedStart, -shrinkedStart, shrinkTransition),
+                _AnimationsLevel.mediumExpanded => lerpDouble(
+                    shrinkedStart - expandedStart, 0, shrinkTransition),
+                _AnimationsLevel.large => 0,
+              },
+              top: 0,
+              bottom: 0,
+              child: child!,
+            );
+          },
+          child: child,
         );
       },
       child: ScaleTransition(
         scale: scaleAnimation,
+        alignment:
+            widget.rtlOpening ? Alignment.centerRight : Alignment.centerLeft,
         child: Stack(
           clipBehavior: Clip.none,
           children: [
@@ -213,43 +245,37 @@ class _LnAnimatedDrawerLayoutState extends LnState<LnAnimatedDrawerLayout>
   }
 
   Widget _buildDrawer(BuildContext context, TextDirection direction) {
-    final scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.0 / widget.scaleEffectFactor,
-    ).animate(controller.hideAnimation);
-
-    Animation<Rect?> positionAnimation(double hideTransition) {
-      Rect rectFor(double maxSlide) {
-        final reverseTransition = 1 - hideTransition;
-        final left = switch (direction) {
-          TextDirection.ltr => maxSlide * (reverseTransition - 1),
-          TextDirection.rtl =>
-            mediaQuery.size.width - maxSlide * reverseTransition,
-        };
-        return Rect.fromLTWH(left, 0, maxSlide, mediaQuery.size.height);
-      }
-
-      return RectTween(
-        begin: rectFor(widget.expandedDrawerWidth),
-        end: rectFor(widget.shrinkedDrawerWidth),
-      ).animate(controller.shrinkAnimation);
-    }
-
     return AnimatedBuilder(
       animation: controller.hideAnimation,
       builder: (context, child) {
-        return RelativePositionedTransition(
-          rect: positionAnimation(controller.hideAnimation.value),
-          size: mediaQuery.size,
-          child: child!,
+        final hideTransition = controller.hideAnimation.value;
+        return AnimatedBuilder(
+          animation: controller.shrinkAnimation,
+          builder: (context, child) {
+            final width = lerpDouble(
+              widget.expandedDrawerWidth,
+              widget.shrinkedDrawerWidth,
+              controller.shrinkAnimation.value,
+            )!;
+            return Positioned.directional(
+              textDirection: direction,
+              start: -width * hideTransition,
+              top: 0,
+              bottom: 0,
+              width: width,
+              child: child!,
+            );
+          },
+          child: Transform.scale(
+            scale: lerpDouble(1, 1 / widget.scaleEffectFactor, hideTransition),
+            alignment: widget.rtlOpening
+                ? Alignment.centerLeft
+                : Alignment.centerRight,
+            child: child,
+          ),
         );
       },
-      child: ScaleTransition(
-        scale: scaleAnimation,
-        alignment:
-            widget.rtlOpening ? Alignment.centerLeft : Alignment.centerRight,
-        child: widget.drawer,
-      ),
+      child: widget.drawer,
     );
   }
 
@@ -257,7 +283,7 @@ class _LnAnimatedDrawerLayoutState extends LnState<LnAnimatedDrawerLayout>
   Widget build(BuildContext context) {
     final direction = widget.rtlOpening ? TextDirection.rtl : TextDirection.ltr;
 
-    return Stack(
+    Widget result = Stack(
       clipBehavior: Clip.none,
       children: [
         _buildDrawer(context, direction),
@@ -273,6 +299,30 @@ class _LnAnimatedDrawerLayoutState extends LnState<LnAnimatedDrawerLayout>
             ),
           ),
       ],
+    );
+
+    /*if (widget.safeTop || widget.safeRight || widget.safeRight) {
+      result = SafeArea(
+        minimum: widget.backdropPadding ?? EdgeInsets.zero,
+        child: result,
+      );
+    } else if (widget.backdropPadding != null) {
+      result = Padding(
+        padding: widget.backdropPadding!,
+        child: result,
+      );
+    }*/
+
+    return ColoredBox(
+      color: widget.backdropColor,
+      child: SafeArea(
+        left: widget.safeLeft,
+        top: widget.safeTop,
+        right: widget.safeRight,
+        bottom: widget.safeBottom,
+        minimum: widget.backdropPadding ?? EdgeInsets.zero,
+        child: result,
+      ),
     );
   }
 
@@ -341,9 +391,14 @@ class _CapturedDragStart {
   final VoidCallback completer;
 
   void handleDragPositionUpdate(Offset newPosition, bool rtlOpening) {
-    final diff = (newPosition - position).dx;
+    const confortableLength = 40;
+    double diff = (newPosition - position).dx;
+    double normalizedDiff = diff.abs() > confortableLength
+        ? (diff - confortableLength * diff.sign)
+        : 0;
     final slideDirectionSign = (rtlOpening ? 1 : -1);
-    valueChanged(value + (diff / slidableLength) * slideDirectionSign);
+    valueChanged(
+        value + (normalizedDiff / slidableLength) * slideDirectionSign);
   }
 }
 
@@ -351,24 +406,24 @@ class LnAnimatedDrawerController extends ValueNotifier<LnDrawerLayoutState> {
   LnAnimatedDrawerController({
     required LayoutLevel initialLayoutLevel,
     required TickerProvider vsync,
-    Duration hideAnimationDuration = const Duration(milliseconds: 500),
-    Curve hideAnimationCurve = Curves.easeInOut,
-    Duration shrinkAnimationDuration = const Duration(milliseconds: 750),
-    Curve shrinkAnimationCurve = Curves.easeInOut,
+    Duration animationDuration = const Duration(milliseconds: 500),
+    Curve animationCurve = Curves.easeInOut,
+    Duration? shrinkAnimationDuration,
+    Curve? shrinkAnimationCurve,
   }) : this._(
           vsync: vsync,
           animationsLevel: _AnimationsLevel.from(initialLayoutLevel),
-          hideAnimationDuration: hideAnimationDuration,
-          shrinkAnimationDuration: shrinkAnimationDuration,
-          hideAnimationCurve: hideAnimationCurve,
-          shrinkAnimationCurve: shrinkAnimationCurve,
+          animationDuration: animationDuration,
+          animationCurve: animationCurve,
+          shrinkAnimationDuration: shrinkAnimationDuration ?? animationDuration,
+          shrinkAnimationCurve: shrinkAnimationCurve ?? animationCurve,
         );
 
   LnAnimatedDrawerController._({
     required TickerProvider vsync,
     required _AnimationsLevel animationsLevel,
-    required Duration hideAnimationDuration,
-    required this.hideAnimationCurve,
+    required Duration animationDuration,
+    required this.animationCurve,
     required Duration shrinkAnimationDuration,
     required this.shrinkAnimationCurve,
   })  : _animationsLevel = animationsLevel,
@@ -377,7 +432,7 @@ class LnAnimatedDrawerController extends ValueNotifier<LnDrawerLayoutState> {
     _hideController = AnimationController(
       vsync: vsync,
       value: value.hidden ? 1 : 0,
-      duration: hideAnimationDuration,
+      duration: animationDuration,
     )..addStatusListener((status) {
         if (_animationValueHidden != value.hidden) {
           value = value.copyWith(hidden: _animationValueHidden);
@@ -404,7 +459,7 @@ class LnAnimatedDrawerController extends ValueNotifier<LnDrawerLayoutState> {
   Animation<double> get hideAnimation => _hideController;
   Animation<double> get shrinkAnimation => _shrinkController;
 
-  final Curve hideAnimationCurve;
+  final Curve animationCurve;
   final Curve shrinkAnimationCurve;
 
   bool _hideable;
@@ -433,7 +488,7 @@ class LnAnimatedDrawerController extends ValueNotifier<LnDrawerLayoutState> {
         case _AnimationsLevel.mediumExpanded:
           shrink();
           break;
-        case _AnimationsLevel.expandedPlus:
+        case _AnimationsLevel.large:
           expand();
           break;
       }
@@ -443,11 +498,11 @@ class LnAnimatedDrawerController extends ValueNotifier<LnDrawerLayoutState> {
   // hide - show
   void hide() {
     assert(hideable);
-    _hideController.animateTo(1, curve: hideAnimationCurve);
+    _hideController.animateTo(1, curve: animationCurve);
   }
 
   void show() {
-    _hideController.animateTo(0, curve: hideAnimationCurve);
+    _hideController.animateTo(0, curve: animationCurve);
   }
 
   void toggleDrawer() => _animationValueHidden ? show() : hide();
@@ -489,7 +544,7 @@ class LnDrawerLayoutState {
           LnDrawerLayoutState(hidden: true, shrinked: false),
         _AnimationsLevel.mediumExpanded =>
           LnDrawerLayoutState(hidden: false, shrinked: true),
-        _AnimationsLevel.expandedPlus =>
+        _AnimationsLevel.large =>
           LnDrawerLayoutState(hidden: false, shrinked: false),
       };
 

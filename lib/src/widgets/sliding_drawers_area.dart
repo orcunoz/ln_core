@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -5,6 +7,10 @@ import 'package:flutter/material.dart';
 import 'package:ln_core/ln_core.dart';
 
 import 'dart:math' as math;
+
+part 'sliding_drawer.dart';
+
+const _kDrawDebugBounds = false;
 
 class _SlidingDrawersScope extends InheritedWidget {
   const _SlidingDrawersScope({
@@ -67,6 +73,7 @@ class SlidingDrawersScrollable extends StatefulWidget {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           clipBehavior: Clip.none,
+          padding: EdgeInsets.zero,
           itemCount: (separatorBuilder == null
               ? itemCount
               : (math.max(0, 2 * itemCount - 1))),
@@ -76,12 +83,12 @@ class SlidingDrawersScrollable extends StatefulWidget {
                   ? null
                   : (key) {
                       var index = findChildIndexCallback(key);
-                      return index == null ? null : (index / 2).round();
+                      return index == null ? null : (index / 2).floor();
                     },
           itemBuilder: separatorBuilder == null
               ? itemBuilder
               : (context, index) {
-                  final itemIndex = (index / 2).round();
+                  final itemIndex = (index / 2).floor();
                   return index.isEven
                       ? itemBuilder(context, itemIndex)
                       : separatorBuilder(context, itemIndex);
@@ -104,25 +111,24 @@ class SlidingDrawersScrollable extends StatefulWidget {
       _SlidingDrawersScrollableState();
 }
 
-class _SlidingDrawersScrollableState extends State<SlidingDrawersScrollable> {
-  ScrollController? _localController;
-  ScrollController get controller => widget.controller ?? _localController!;
-
+class _SlidingDrawersScrollableState extends State<SlidingDrawersScrollable>
+    with WidgetsBindingObserver {
   _SlidingDrawersAreaState? _scope;
   _SlidingDrawersAreaState get scope {
     assert(_scope != null);
     return _scope!;
   }
 
+  ScrollController? _localController;
+  ScrollController get controller => widget.controller ?? _localController!;
+
   late final DebouncedAction _scrollEndAction = DebouncedAction(
-    duration: Duration(milliseconds: 250),
+    duration: Duration(milliseconds: 200),
     action: () {
-      _scope?.top._handleScrollEnd();
-      _scope?.bottom._handleScrollEnd();
+      _scope?.top.snapDrawers(() => _scrollEndAction.debounced);
+      _scope?.bottom.snapDrawers(() => _scrollEndAction.debounced);
     },
   );
-
-  late double _scrollOffset;
 
   @override
   void initState() {
@@ -131,9 +137,25 @@ class _SlidingDrawersScrollableState extends State<SlidingDrawersScrollable> {
     if (widget.controller == null) {
       _localController = ScrollController();
     }
+  }
 
-    controller.addListener(_handleScroll);
-    _scrollOffset = controller.hasClients ? controller.offset : 0;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    final scope = _SlidingDrawersScope.of(context);
+    if (_scope != scope) {
+      _scope = scope..resetDrawers();
+      _notifyScope();
+    }
+  }
+
+  void _notifyScope() {
+    final position =
+        controller.positions.firstWhereOrNull((p) => p.axis == Axis.vertical);
+    if (position != null) {
+      scope.handleScrollUpdate(0, position.pixels, position.maxScrollExtent);
+    }
   }
 
   @override
@@ -141,121 +163,126 @@ class _SlidingDrawersScrollableState extends State<SlidingDrawersScrollable> {
     super.didUpdateWidget(oldWidget);
 
     if (widget.controller != oldWidget.controller) {
-      oldWidget.controller?.removeListener(_handleScroll);
-
       if (oldWidget.controller == null) {
-        _localController?.dispose();
+        _localController!.dispose();
         _localController = null;
+      } else {
+        //_unsyncController(oldWidget.controller!);
       }
 
       if (widget.controller == null) {
-        _localController =
-            ScrollController(initialScrollOffset: oldWidget.controller!.offset)
-              ..addListener(_handleScroll);
+        _localController = ScrollController();
+      } else {
+        //_syncController(widget.controller!);
       }
 
-      controller.addListener(_handleScroll);
-    }
-
-    if (widget.child != oldWidget.child) {
-      scope.resetDrawers();
-    }
-  }
-
-  void _handleScroll() {
-    final offsetChange = controller.offset - _scrollOffset;
-    if (offsetChange != 0) {
-      _scrollOffset = controller.offset;
-
-      _scope?.top
-          ._handleScroll(_scrollOffset, offsetChange, overs: true, outs: true);
-      _scope?.bottom
-          ._handleScroll(_scrollOffset, offsetChange, overs: true, outs: true);
-
-      _scrollEndAction.invoke();
+      _notifyScope();
     }
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    _scope = _SlidingDrawersScope.of(context);
+  void deactivate() {
+    _scope?.resetDrawers();
+    super.deactivate();
   }
 
   @override
   void dispose() {
-    _localController?.dispose();
-    _scope?.resetDrawers();
     super.dispose();
+    _localController?.dispose();
   }
 
-  Widget _build(BuildContext context, double? viewportHeight, Widget? child) {
-    return ListenableBuilder(
-      listenable: Listenable.merge([
-        scope.top.insetsListenable,
-        scope.bottom.insetsListenable,
-      ]),
-      builder: (context, _) {
-        final insets = EdgeInsets.only(
-          top: scope.top.computedScrollableInset,
-          bottom: scope.bottom.computedScrollableInset,
-        );
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification.depth != 0) return false;
+
+    if (notification is ScrollEndNotification) {
+      _scrollEndAction.invoke();
+    } else if (notification is OverscrollNotification) {
+      //Log.i("-- OverscrollNotification");
+    } else if (notification is ScrollUpdateNotification) {
+      scope.handleScrollUpdate(
+        notification.scrollDelta ?? 0,
+        notification.metrics.pixels,
+        notification.metrics.maxScrollExtent,
+      );
+      return true;
+    }
+
+    return false;
+  }
+
+  Widget _buildScrollable(
+      BuildContext context, EdgeInsetsGeometry padding, Widget? child) {
+    return ValueListenableBuilder(
+      valueListenable: scope.scrollableInsetsNotifier,
+      builder: (context, scrollableInsets, child) {
         return SingleChildScrollView(
           scrollDirection: Axis.vertical,
           primary: widget.primary,
-          padding: widget.padding?.add(insets) ?? insets,
+          padding: padding.add(scrollableInsets),
           controller: controller,
           physics: widget.physics,
           dragStartBehavior: widget.dragStartBehavior,
           clipBehavior: widget.clipBehavior,
           restorationId: widget.restorationId,
           keyboardDismissBehavior: widget.keyboardDismissBehavior,
-          child: viewportHeight == null
-              ? child
-              : ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight: viewportHeight -
-                        (widget.padding?.vertical ?? 0) -
-                        (scope.top.value.inset + scope.bottom.value.inset) +
-                        (scope.top.value.slideableLength +
-                            scope.bottom.value.slideableLength) +
-                        (scope.top._parent?.value.margin ?? 0) +
-                        (scope.bottom._parent?.value.margin ?? 0),
-                  ),
-                  child: child,
-                ),
+          child: child,
         );
       },
+      child: child,
     );
-    /*return NotificationListener(
-      onNotification: (ScrollNotification notification) {
-        Log.i(notification);
-
-        if (notification.depth == 0 &&
-            notification.metrics.axis == Axis.vertical) {
-          scope._handleScrollNotification(notification);
-          _scrollEndAction.invoke();
-          return true;
-        }
-
-        return false;
-      },
-      child: ,
-    );*/
   }
 
   @override
   Widget build(BuildContext context) {
-    return widget.fillViewport
+    Widget? viewport = widget.child;
+
+    final padding = widget.padding ?? EdgeInsets.zero;
+
+    if (_kDrawDebugBounds) {
+      // Viewport bounds
+      viewport = DebugAreaBounds(child: viewport);
+    }
+
+    Widget scrollable = widget.fillViewport
         ? LayoutBuilder(builder: (context, constraints) {
-            return _build(
+            final scrollableHeight = constraints.maxHeight;
+            return _buildScrollable(
               context,
-              constraints.maxHeight,
-              widget.child,
+              padding,
+              ValueListenableBuilder(
+                valueListenable: scope.fillViewportExtendsNotifier,
+                builder: (context, fillViewportExtends, child) {
+                  final viewportHeight =
+                      scrollableHeight - padding.vertical + fillViewportExtends;
+
+                  //Log.i("scrollable: ${scrollableHeight.toStringAsFixed(2)}");
+                  //Log.i("viewport: ${viewportHeight.toStringAsFixed(2)}");
+
+                  return ConstrainedBox(
+                    constraints: BoxConstraints(
+                        minHeight: viewportHeight, minWidth: double.infinity),
+                    child: child,
+                  );
+                },
+                child: viewport,
+              ),
             );
           })
-        : _build(context, null, widget.child);
+        : _buildScrollable(context, padding, viewport);
+
+    if (_kDrawDebugBounds) {
+      // Scrollable bounds
+      scrollable = DebugAreaBounds(
+        color: Colors.green,
+        child: scrollable,
+      );
+    }
+
+    return NotificationListener(
+      onNotification: _handleScrollNotification,
+      child: scrollable,
+    );
   }
 }
 
@@ -264,18 +291,22 @@ mixin SlidingDrawers on LnState<SlidingDrawersArea> {
     return _SlidingDrawersScope.of(context);
   }
 
-  SlidingDrawersGroup _groupOf(VerticalDirection direction) =>
+  _SlidingDrawersGroup _groupOf(VerticalDirection direction) =>
       switch (direction) {
         VerticalDirection.up => top,
         VerticalDirection.down => bottom,
       };
 
-  final top = SlidingDrawersGroup._top();
-  final bottom = SlidingDrawersGroup._bottom();
+  late final top = _SlidingDrawersGroup._top(this as _SlidingDrawersAreaState);
+  late final bottom =
+      _SlidingDrawersGroup._bottom(this as _SlidingDrawersAreaState);
 
-  void resetDrawers({Duration? duration = kSlidingDrawersAnimationDuration}) {
-    top.resetDrawerPositions(duration: duration);
-    bottom.resetDrawerPositions(duration: duration);
+  void resetDrawers({
+    Duration? duration = kSlidingDrawersAnimationDuration,
+    Curve? curve = kSlidingDrawersAnimationCurve,
+  }) {
+    top.resetDrawerPositions(duration: duration, curve: curve);
+    bottom.resetDrawerPositions(duration: duration, curve: curve);
   }
 
   VerticalDirection? directionOf(final SlidingDrawer drawer) {
@@ -304,9 +335,13 @@ class SlidingDrawersArea extends StatefulWidget {
     super.key,
     this.topDrawers = const [],
     this.bottomDrawers = const [],
+    this.isolated = false,
+    //this.keepChildHeightConstant = false,
     required this.child,
   });
 
+  final bool keepChildHeightConstant = false;
+  final bool isolated;
   final List<Widget> topDrawers;
   final List<Widget> bottomDrawers;
   final Widget child;
@@ -317,294 +352,529 @@ class SlidingDrawersArea extends StatefulWidget {
 
 class _SlidingDrawersAreaState extends LnState<SlidingDrawersArea>
     with SlidingDrawers {
+  final fillViewportExtendsNotifier = ValueNotifier<double>(0);
+  late final scrollableInsetsNotifier =
+      ValueNotifier<EdgeInsets>(EdgeInsets.zero);
+
+  void _computeFillViewportExtends() {
+    final recursiveOutsideSlideableLengths =
+        top.recursiveOutsideSlideableLengthsSumNotifier.value +
+            bottom.recursiveOutsideSlideableLengthsSumNotifier.value;
+    final recursiveOutSlideSum = top.recursiveOutsideSlideSumNotifier.value +
+        bottom.recursiveOutsideSlideSumNotifier.value;
+    final insideShrinkedHeightsSum =
+        top.insideShrinkedHeightsSumNotifier.value +
+            bottom.insideShrinkedHeightsSumNotifier.value;
+
+    fillViewportExtendsNotifier.value = recursiveOutsideSlideableLengths -
+        recursiveOutSlideSum -
+        insideShrinkedHeightsSum;
+  }
+
+  void _computeScrollableInset() {
+    scrollableInsetsNotifier.value = EdgeInsets.only(
+      top: top.insideExpandedHeightsSumNotifier.value +
+          top.recursiveOutsideSlideSumNotifier.value,
+      bottom: bottom.insideExpandedHeightsSumNotifier.value +
+          bottom.recursiveOutsideSlideSumNotifier.value,
+    );
+  }
+
+  late final Listenable areaInsetsListenable = Listenable.merge([
+    top.outsideExpandedHeightsSumNotifier,
+    top.outsideSlideSumNotifier,
+    bottom.outsideExpandedHeightsSumNotifier,
+    bottom.outsideSlideSumNotifier
+  ]);
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    final parent = _SlidingDrawersScope.maybeOf(context);
-    top.setParent(parent?.top);
-    bottom.setParent(parent?.bottom);
+    _refreshParentRegistration();
   }
 
-  /*void _handleScrollNotification(ScrollNotification notification) {
-    final newOffset = notification.metrics.extentBefore;
-    double offsetChange = switch (notification) {
-      var n when n is OverscrollNotification => n.overscroll,
-      var n when n is ScrollUpdateNotification => n.scrollDelta ?? 0,
-      _ => 0,
-    };
+  @override
+  void didUpdateWidget(covariant SlidingDrawersArea oldWidget) {
+    super.didUpdateWidget(oldWidget);
 
-    if (offsetChange != 0) {
-      top._handleScroll(newOffset, offsetChange, overs: true, outs: true);
-      bottom._handleScroll(newOffset, offsetChange, overs: true, outs: true);
+    if (widget.isolated != oldWidget.isolated) {
+      _refreshParentRegistration();
     }
-  }*/
+  }
+
+  void _refreshParentRegistration() {
+    final parent =
+        widget.isolated ? null : _SlidingDrawersScope.maybeOf(context);
+    top.setParent(parent?.top);
+    bottom.setParent(parent?.bottom);
+    _computeScrollableInset();
+    _computeFillViewportExtends();
+  }
+
+  void handleScrollUpdate(double change, double offset, double maxScroll) {
+    top.handleScrollUpdate(change, offset, maxScroll);
+    bottom.handleScrollUpdate(change, offset, maxScroll);
+  }
+
+  Widget _buildStack(BuildContext context, BoxConstraints? constraints) {
+    // ignore: invalid_use_of_protected_member
+    final hasScrollable = scrollableInsetsNotifier.hasListeners;
+    Widget child = widget.child;
+
+    child = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        ListenableBuilder(
+          listenable: areaInsetsListenable,
+          builder: (context, child) {
+            if (hasScrollable && widget.keepChildHeightConstant) {
+              return Positioned(
+                left: 0,
+                right: 0,
+                top: top.outsideExpandedHeightsSumNotifier.value -
+                    top.outsideSlideSumNotifier.value,
+                height: constraints!.maxHeight -
+                    top.recursiveOutsideSlideableLengthsSumNotifier.value,
+                child: child!,
+              );
+            } else {
+              return Padding(
+                padding: EdgeInsets.only(
+                  top: top.outsideExpandedHeightsSumNotifier.value -
+                      top.outsideSlideSumNotifier.value,
+                  bottom: bottom.outsideExpandedHeightsSumNotifier.value -
+                      bottom.outsideSlideSumNotifier.value,
+                ),
+                child: child!,
+              );
+            }
+          },
+          child: child,
+        ),
+        Positioned.fill(
+          top: null,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            verticalDirection: VerticalDirection.up,
+            children: widget.bottomDrawers.reversed.toList(),
+          ),
+        ),
+        Positioned.fill(
+          bottom: null,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            verticalDirection: VerticalDirection.down,
+            children: widget.topDrawers,
+          ),
+        ),
+      ],
+    );
+
+    if (_kDrawDebugBounds) {
+      child = DebugAreaBounds(
+        color: hasScrollable ? Colors.red : Colors.yellow,
+        child: child,
+      );
+    }
+
+    return child;
+  }
+
+  @override
+  void dispose() {
+    top.dispose();
+    bottom.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return _SlidingDrawersScope(
       state: this,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          ListenableBuilder(
-            listenable: Listenable.merge([top, bottom]),
-            builder: (context, child) {
-              return Padding(
-                padding: EdgeInsets.only(
-                  top: top.value.margin,
-                  bottom: bottom.value.margin,
-                ),
-                child: child,
-              );
-            },
-            child: widget.child,
-          ),
-          Positioned.fill(
-            top: null,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              mainAxisSize: MainAxisSize.min,
-              verticalDirection: VerticalDirection.up,
-              children: widget.bottomDrawers,
-            ),
-          ),
-          Positioned.fill(
-            bottom: null,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              verticalDirection: VerticalDirection.down,
-              children: widget.topDrawers,
-            ),
-          ),
-        ],
-      ),
+      child: widget.keepChildHeightConstant
+          ? LayoutBuilder(builder: _buildStack)
+          : _buildStack(context, null),
     );
   }
 }
 
-class DrawersGroupState {
-  const DrawersGroupState({
-    required this.inset,
-    required this.margin,
-    required this.slideableLength,
-    required this.nonSlideableLength,
-    required this.shrinkedOutInset,
+class SlidingDrawersGroupState {
+  const SlidingDrawersGroupState({
+    required this.atStart,
+    required this.scrollOffsetUnderDrawers,
+    required this.shrinkedHeightsSum,
+    required this.allDrawersShrinked,
   });
 
-  final double inset;
-  final double margin;
-  final double slideableLength;
-  final double nonSlideableLength;
-  final double shrinkedOutInset;
+  final bool atStart;
+  final bool scrollOffsetUnderDrawers;
+  final double shrinkedHeightsSum;
+  final bool allDrawersShrinked;
 
   @override
-  bool operator ==(Object other) =>
-      other is DrawersGroupState &&
-      inset == other.inset &&
-      margin == other.margin &&
-      slideableLength == other.slideableLength &&
-      nonSlideableLength == other.nonSlideableLength &&
-      shrinkedOutInset == other.shrinkedOutInset;
+  bool operator ==(Object other) {
+    if (identical(this, other)) {
+      return true;
+    }
+    if (other.runtimeType != runtimeType) {
+      return false;
+    }
+    return other is SlidingDrawersGroupState &&
+        other.atStart == atStart &&
+        other.scrollOffsetUnderDrawers == scrollOffsetUnderDrawers &&
+        other.shrinkedHeightsSum == shrinkedHeightsSum &&
+        other.allDrawersShrinked == allDrawersShrinked;
+  }
 
   @override
-  int get hashCode => Object.hash(inset, margin);
+  int get hashCode => Object.hash(
+        atStart,
+        scrollOffsetUnderDrawers,
+        shrinkedHeightsSum,
+        allDrawersShrinked,
+      );
+
+  @override
+  String toString() {
+    return "SlidingDrawersGroupState: ("
+        "atStart: $atStart, "
+        "scrollOffsetUnderDrawers: $scrollOffsetUnderDrawers, "
+        "shrinkedHeightsSumZero: $shrinkedHeightsSum, "
+        "allDrawersShrinked: $allDrawersShrinked"
+        ")";
+  }
 }
 
-class SlidingDrawersGroup extends ValueListenable<DrawersGroupState>
-    with ChangeNotifier {
-  SlidingDrawersGroup._top() : direction = VerticalDirection.up;
-  SlidingDrawersGroup._bottom() : direction = VerticalDirection.down;
+class _SlidingDrawersGroup {
+  _SlidingDrawersGroup._top(this.area) : direction = VerticalDirection.up;
+  _SlidingDrawersGroup._bottom(this.area) : direction = VerticalDirection.down;
   final VerticalDirection direction;
 
   final _states = <SlidingDrawerState>{};
-  Iterable<List<SlidingDrawerState>> _sortedStates = [];
+  List<SlidingDrawerState> _pinnedStates = [];
+  List<List<SlidingDrawerState>> _notPinnedSortedStates = [];
 
-  SlidingDrawersGroup? _parent;
-  DrawersGroupState _state = DrawersGroupState(
-    inset: 0,
-    margin: 0,
-    shrinkedOutInset: 0,
-    slideableLength: 0,
-    nonSlideableLength: 0,
-  );
+  final _stateNotifier = ValueNotifier<SlidingDrawersGroupState?>(null);
+  SlidingDrawersGroupState? get state => _stateNotifier.value;
+  Listenable get listenable => _stateNotifier;
 
-  @override
-  DrawersGroupState get value => _state;
+  _SlidingDrawersGroup? _parent;
+  final _SlidingDrawersAreaState area;
 
-  final _computedSlideSumNotifier = ChangeNotifier();
-  late final insetsListenable =
-      Listenable.merge([_computedSlideSumNotifier, this]);
-  double get computedSlideSum =>
-      (value.shrinkedOutInset) + (_parent?.computedSlideSum ?? 0);
+  double insideSlideSum = 0;
+  double? distanceToStart;
 
-  double get computedScrollableInset =>
-      _hasChildGroup ? 0 : (value.inset + (_parent?.computedSlideSum ?? 0));
+  late final insideShrinkedHeightsSumNotifier = ValueNotifier<double>(0)
+    ..addListener(area._computeFillViewportExtends);
+  late final insideExpandedHeightsSumNotifier = ValueNotifier<double>(0)
+    ..addListener(area._computeScrollableInset);
+  late final outsideSlideableLengthsSumNotifier = ValueNotifier<double>(0)
+    ..addListener(_computeRecursiveOutsideSlideableLengthsSum);
+  final outsideExpandedHeightsSumNotifier = ValueNotifier<double>(0);
+  late final outsideSlideSumNotifier = ValueNotifier<double>(0)
+    ..addListener(_computeRecursiveOutsideSlideSum);
 
-  bool _hasChildGroup = false;
-  double scrollOffset = 0;
+  late final recursiveOutsideSlideSumNotifier = ValueNotifier<double>(0)
+    ..addListener(() {
+      area
+        .._computeScrollableInset()
+        .._computeFillViewportExtends();
+    });
+  late final recursiveOutsideSlideableLengthsSumNotifier =
+      ValueNotifier<double>(0)..addListener(area._computeFillViewportExtends);
 
-  void _notifyChild(bool has) {
-    _hasChildGroup = has;
+  Iterable<SlidingDrawerState> get insideDrawers =>
+      _states.where((d) => d.onScrollableBounds);
+
+  Iterable<SlidingDrawerState> get outsideDrawers =>
+      _states.where((d) => !d.onScrollableBounds);
+
+  void _computeRecursiveOutsideSlideSum() {
+    recursiveOutsideSlideSumNotifier.value =
+        (_parent?.recursiveOutsideSlideSumNotifier.value ?? 0) +
+            outsideSlideSumNotifier.value;
   }
 
-  void setParent(SlidingDrawersGroup? parent) {
-    if (_parent != parent) {
-      _parent
-        ?..removeListener(_computedSlideSumNotifier.notifyListeners)
-        .._notifyChild(false);
-      _parent = parent;
-      _parent
-        ?..addListener(_computedSlideSumNotifier.notifyListeners)
-        .._notifyChild(true);
-      _computedSlideSumNotifier.notifyListeners();
-      //_refreshSortedStates();
-    }
+  void _computeRecursiveOutsideSlideableLengthsSum() {
+    recursiveOutsideSlideableLengthsSumNotifier.value =
+        (_parent?.recursiveOutsideSlideableLengthsSumNotifier.value ?? 0) +
+            outsideSlideableLengthsSumNotifier.value;
   }
 
-  @override
+  void _computeOutsideSlideSum() {
+    outsideSlideSumNotifier.value =
+        outsideDrawers.fold(.0, (sum, d) => sum + d.slideAmount);
+  }
+
+  void _computeOutsideSlideableLengthsSum() {
+    outsideSlideableLengthsSumNotifier.value =
+        outsideDrawers.fold(.0, (sum, d) => sum + d.slideableLength);
+  }
+
+  void _computeOutsideExpandedHeightsSum() {
+    outsideExpandedHeightsSumNotifier.value =
+        outsideDrawers.fold(.0, (sum, d) => sum + d.maxHeight);
+  }
+
+  void _computeInsideShrinkedHeightsSum() {
+    insideShrinkedHeightsSumNotifier.value =
+        insideDrawers.fold(.0, (sum, d) => sum + d.minHeight);
+  }
+
+  void _computeInsideExpandedHeightsSum() {
+    insideExpandedHeightsSumNotifier.value =
+        insideDrawers.fold(.0, (sum, d) => sum + d.maxHeight);
+  }
+
+  void _computeInsideSlideSum() {
+    insideSlideSum = insideDrawers.fold(.0, (sum, d) => sum + d.slideAmount);
+  }
+
+  void _computeState() {
+    _computeInsideSlideSum();
+    _computeInsideShrinkedHeightsSum();
+    _computeInsideExpandedHeightsSum();
+    _computeOutsideSlideSum();
+    _computeOutsideSlideableLengthsSum();
+    _computeOutsideExpandedHeightsSum();
+
+    _computeRecursiveOutsideSlideSum();
+    _computeRecursiveOutsideSlideableLengthsSum();
+
+    _computeGroupState();
+  }
+
+  void setParent(_SlidingDrawersGroup? parent) {
+    _parent
+      ?..recursiveOutsideSlideSumNotifier
+          .removeListener(_computeRecursiveOutsideSlideSum)
+      ..recursiveOutsideSlideableLengthsSumNotifier
+          .removeListener(_computeRecursiveOutsideSlideableLengthsSum);
+
+    _parent = parent
+      ?..recursiveOutsideSlideSumNotifier
+          .addListener(_computeRecursiveOutsideSlideSum)
+      ..recursiveOutsideSlideableLengthsSumNotifier
+          .addListener(_computeRecursiveOutsideSlideableLengthsSum);
+
+    _computeRecursiveOutsideSlideSum();
+    _computeRecursiveOutsideSlideableLengthsSum();
+  }
+
   void dispose() {
-    _parent?.removeListener(_computedSlideSumNotifier.notifyListeners);
-    _computedSlideSumNotifier.dispose();
-    super.dispose();
-  }
-
-  void setState(DrawersGroupState value) {
-    //_relativeScrollOffset = _lastScrollOffset - value.inset;
-    if (_state != value) {
-      _state = value;
-      LnSchedulerCallbacks.endOfFrame(notifyListeners);
-    }
+    setParent(null);
+    insideShrinkedHeightsSumNotifier.dispose();
+    insideExpandedHeightsSumNotifier.dispose();
+    outsideSlideableLengthsSumNotifier.dispose();
+    outsideExpandedHeightsSumNotifier.dispose();
+    outsideSlideSumNotifier.dispose();
+    recursiveOutsideSlideSumNotifier.dispose();
+    recursiveOutsideSlideableLengthsSumNotifier.dispose();
   }
 
   void _register(SlidingDrawerState state) {
     final added = _states.add(state);
     assert(added);
-    state.listenable.addListener(_updateState);
+
+    if (state.onScrollableBounds) {
+      state
+        ..boundsListenable.addListener(_computeInsideShrinkedHeightsSum)
+        ..boundsListenable.addListener(_computeInsideExpandedHeightsSum)
+        ..positionListenable.addListener(_computeInsideSlideSum)
+        ..positionListenable.addListener(_computeGroupState);
+    } else {
+      state
+        ..boundsListenable.addListener(_computeOutsideExpandedHeightsSum)
+        ..boundsListenable.addListener(_computeOutsideSlideableLengthsSum)
+        ..positionListenable.addListener(_computeOutsideSlideSum)
+        ..positionListenable.addListener(_computeGroupState);
+    }
+
     _refreshSortedStates();
+    _computeState();
   }
 
   void _unregister(SlidingDrawerState state) {
     final removed = _states.remove(state);
     if (removed) {
-      state.listenable.removeListener(_updateState);
+      state
+        ..boundsListenable.removeListener(_computeInsideShrinkedHeightsSum)
+        ..boundsListenable.removeListener(_computeInsideExpandedHeightsSum)
+        ..boundsListenable.removeListener(_computeOutsideExpandedHeightsSum)
+        ..boundsListenable.removeListener(_computeOutsideSlideableLengthsSum)
+        ..positionListenable.removeListener(_computeInsideSlideSum)
+        ..positionListenable.removeListener(_computeOutsideSlideSum);
+
       _refreshSortedStates();
+      _computeState();
     }
-  }
-
-  void _updateState() {
-    double innerInsets = .0;
-    double outerInsets = .0;
-    double slideableLengths = .0;
-    double nonSlideableLengths = .0;
-    double shrinkedOutInsets = .0;
-
-    for (final state in _states) {
-      if (state.onScrollableBounds) {
-        innerInsets += state.position.maxHeight;
-        nonSlideableLengths +=
-            state.position.maxHeight - state.position.slideableLength;
-      } else {
-        innerInsets += state.position.slideAmount;
-        outerInsets += state.position.visibleHeight;
-        shrinkedOutInsets += state.position.slideAmount;
-      }
-
-      slideableLengths += state.position.slideableLength;
-    }
-
-    setState(DrawersGroupState(
-      inset: innerInsets,
-      margin: outerInsets,
-      slideableLength: slideableLengths,
-      nonSlideableLength: nonSlideableLengths,
-      shrinkedOutInset: shrinkedOutInsets,
-    ));
   }
 
   void _refreshSortedStates() {
     final directionSign = switch (direction) {
-      VerticalDirection.down => 1,
-      VerticalDirection.up => -1,
+      VerticalDirection.down => -1,
+      VerticalDirection.up => 1,
     };
 
-    _sortedStates = _states
-        //.followedBy(_parent?._states ?? [])
+    _notPinnedSortedStates = _states
+        .where((e) => !e.widget.pinned)
         .groupListsBy((s) => s.priority)
         .entries
         .sorted((a, b) => (a.key - b.key) * directionSign)
-        .map((g) => g.value);
+        .map((g) => g.value)
+        .toList();
 
-    double slSum = .0;
-    for (var group in _sortedStates) {
-      for (var state in group) {
-        state.slideRelativeOffset = slSum;
-        slSum += state.position.slideableLength;
-      }
-    }
-
-    _updateState();
+    _pinnedStates = _states
+        .where((e) => e.widget.pinned)
+        .sorted((a, b) => (a.priority - b.priority) * directionSign)
+        .toList();
   }
 
   void resetDrawerPositions({
     Duration? duration = kSlidingDrawersAnimationDuration,
+    Curve? curve = kSlidingDrawersAnimationCurve,
   }) {
     for (final state in _states) {
       if (!state.isReverse) {
-        state.open(duration: duration);
+        state.open(duration: duration, curve: curve);
       }
     }
-    _parent?.resetDrawerPositions(duration: duration);
+    _parent?.resetDrawerPositions(duration: duration, curve: curve);
   }
 
-  void _handleScrollEnd() {
-    const Duration duration = Duration(milliseconds: 300);
-    for (var group in _sortedStates) {
-      for (var state in group
-          .where((ds) => ds.widget.snap && ds.widget.pinnedOffset == null)) {
-        double targetTransition = state.position.transition > .5 ? 1 : 0;
-        if (state.slideDirection == VerticalDirection.up &&
-            (state.slideRelativeOffset + state.position.maxHeight) >
-                scrollOffset - (_parent?.computedSlideSum ?? 0)) {
-          targetTransition = 0;
+  Future<double> snapDrawers(bool Function() checkCanceled,
+      [double? remain]) async {
+    remain ??= distanceToStart! -
+        recursiveOutsideSlideSumNotifier.value -
+        insideDrawers.fold(.0, (sum, d) => sum + d.slideAmount);
+
+    if (_parent != null) {
+      remain = await _parent!.snapDrawers(checkCanceled, remain);
+    }
+    if (checkCanceled()) return remain;
+
+    const Duration duration = Duration(milliseconds: 250);
+
+    for (var group in _notPinnedSortedStates) {
+      for (var state in group.reversed.where((ds) => ds.widget.snap)) {
+        double targetSlideAmount =
+            state.transition > .5 ? state.slideableLength : 0;
+        double slideChange = targetSlideAmount - state.slideAmount;
+
+        if (remain! + precisionErrorTolerance < slideChange) {
+          slideChange -= state.slideableLength;
         }
+
         state.slideTo(
-          targetTransition * state.position.slideableLength,
+          state.slideAmount + slideChange,
           duration: duration,
         );
+
+        remain -= slideChange;
       }
     }
 
-    _parent?._handleScrollEnd();
+    return remain!;
   }
 
-  double _handleScroll(
-    final double offset,
-    final double offsetChange, {
-    required bool overs,
-    required bool outs,
+  void handleScrollUpdate(
+      final double change, final double offset, final double maxScroll) {
+    final startOffset = switch (direction) {
+      VerticalDirection.up => 0,
+      VerticalDirection.down => maxScroll,
+    };
+    final directionSign = switch (direction) {
+      VerticalDirection.up => 1,
+      VerticalDirection.down => -1,
+    };
+
+    distanceToStart = (startOffset - offset).abs();
+
+    final distanceToUnpinnedsStart =
+        distanceToStart! - _handleOffsetUpdate(distanceToStart!);
+
+    double safeChange = change;
+    if (directionSign == change.sign) {
+      safeChange =
+          math.min(change.abs(), distanceToUnpinnedsStart) * change.sign;
+    }
+    safeChange = _handleScrollSlide(safeChange);
+    _computeGroupState();
+  }
+
+  void _computeGroupState() {
+    final slideSum = recursiveOutsideSlideSumNotifier.value + insideSlideSum;
+
+    final shrinkedHeightsSum = outsideExpandedHeightsSumNotifier.value -
+        outsideSlideableLengthsSumNotifier.value +
+        insideShrinkedHeightsSumNotifier.value;
+
+    final slideableLengthsSum =
+        recursiveOutsideSlideableLengthsSumNotifier.value +
+            insideExpandedHeightsSumNotifier.value -
+            insideShrinkedHeightsSumNotifier.value;
+
+    final newState = SlidingDrawersGroupState(
+      atStart: distanceToStart == slideSum,
+      scrollOffsetUnderDrawers: (distanceToStart ?? double.infinity) > slideSum,
+      shrinkedHeightsSum: shrinkedHeightsSum,
+      allDrawersShrinked: slideableLengthsSum == slideSum,
+    );
+
+    if (newState != state) {
+      _stateNotifier.value = newState;
+    }
+  }
+
+  double _handleOffsetUpdate(final double distanceToStart) {
+    double parentsPinnedDrawersSlideSum =
+        _parent?._handleOffsetUpdate(distanceToStart) ?? 0;
+
+    for (var state in _pinnedStates) {
+      state.setSlidePosition(
+        slide: distanceToStart - parentsPinnedDrawersSlideSum,
+      );
+      parentsPinnedDrawersSlideSum += state.slideAmount;
+    }
+
+    return parentsPinnedDrawersSlideSum;
+  }
+
+  double _handleScrollSlide(
+    final double amount, {
+    final bool overs = true,
+    final bool outs = true,
   }) {
-    scrollOffset = offset;
-    assert(overs || outs);
-    var groups =
-        offsetChange < 0 ? _sortedStates.toList().reversed : _sortedStates;
+    double remain = amount;
+    if (!overs && !outs) return remain;
 
-    var remain = offsetChange;
+    double updateParentOutDrawers(double change) =>
+        _parent?._handleScrollSlide(change, overs: false, outs: outs) ?? change;
 
-    _parent?._handleScroll(offset, remain, overs: true, outs: false);
+    final bool directionDown = amount > 0;
 
-    for (var group in groups) {
-      final states = switch ((overs, outs)) {
-        (true, true) => group.toList(),
-        (true, false) => group.where((d) => d.onScrollableBounds).toList(),
-        (false, true) => group.where((d) => !d.onScrollableBounds).toList(),
-        _ => const <SlidingDrawerState>[],
-      };
+    var groups = directionDown
+        ? _notPinnedSortedStates.reversed
+        : _notPinnedSortedStates;
+
+    _parent?._handleScrollSlide(remain, overs: overs, outs: false);
+
+    if (!directionDown) {
+      remain = updateParentOutDrawers(remain);
+    }
+
+    for (Iterable<SlidingDrawerState> group in groups) {
+      if (!outs) group = group.where((d) => d.onScrollableBounds);
+      if (!overs) group = group.where((d) => !d.onScrollableBounds);
+
+      final states = group.toList();
       while (remain.abs() > precisionErrorTolerance && states.isNotEmpty) {
         final sharedSlide = remain / states.length;
         for (var state in states.toList()) {
-          final change = state.handleScroll(offset, sharedSlide);
+          final change = state.handleScroll(sharedSlide);
           if (change.abs() < precisionErrorTolerance) {
             states.remove(state);
           }
@@ -613,13 +883,10 @@ class SlidingDrawersGroup extends ValueListenable<DrawersGroupState>
       }
     }
 
-    if (remain.abs() > precisionErrorTolerance) {
-      remain =
-          _parent?._handleScroll(offset, remain, overs: false, outs: true) ??
-              remain;
+    if (directionDown) {
+      remain = updateParentOutDrawers(remain);
     }
 
-    _updateState();
     return remain;
   }
 }

@@ -14,6 +14,14 @@ class Log {
     _logger.i(_messageWithTime(message));
   }
 
+  static void w(dynamic message) {
+    _logger.w(_messageWithTime(message));
+  }
+
+  static void d(dynamic message) {
+    _logger.d(_messageWithTime(message));
+  }
+
   static void e(dynamic errorOrMessage, {StackTrace? stackTrace}) {
     Error? error = errorOrMessage is Error ? errorOrMessage : null;
 

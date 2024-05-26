@@ -20,10 +20,17 @@ class MaterialCustomColor {
   MaterialCustomColor(
     this.seedColor, {
     required this.scheme,
-  }) : palette = TonalPalette.fromHct(Hct.fromInt(Blend.harmonize(
-          seedColor,
-          MaterialDynamicColors.primary.getArgb(scheme),
-        )));
+    bool harmonize = true,
+  }) : palette = TonalPalette.fromHct(
+          Hct.fromInt(
+            harmonize
+                ? Blend.harmonize(
+                    seedColor,
+                    MaterialDynamicColors.primary.getArgb(scheme),
+                  )
+                : seedColor,
+          ),
+        );
 
   final int seedColor;
   final DynamicScheme scheme;
@@ -186,19 +193,18 @@ class MaterialCustomColor {
 }
 
 class TonalTheme extends ThemeExtension<TonalTheme> {
-  TonalTheme.fromColorScheme(ColorScheme colorScheme)
-      : this(TonalScheme.fromColorScheme(colorScheme,
-            seedColor: colorScheme.primary));
+  TonalTheme.fromSeed(Brightness brightness, Color seedColor)
+      : this(TonalScheme.fromSeed(
+          brightness: brightness,
+          seedColor: seedColor,
+        ));
   const TonalTheme(this.tonalScheme);
 
   final TonalScheme tonalScheme;
 
   @override
-  ThemeExtension<TonalTheme> copyWith({ColorScheme? colorScheme}) {
-    final newScheme = colorScheme ?? tonalScheme;
-    return newScheme is TonalScheme
-        ? TonalTheme(newScheme)
-        : TonalTheme.fromColorScheme(newScheme);
+  ThemeExtension<TonalTheme> copyWith({TonalScheme? tonalScheme}) {
+    return TonalTheme(tonalScheme ?? this.tonalScheme);
   }
 
   @override
@@ -213,8 +219,6 @@ class TonalTheme extends ThemeExtension<TonalTheme> {
       brightness: t <= .5 ? sch.brightness : oSch.brightness,
       contrastLevel: lerpDouble(sch.contrastLevel, oSch.contrastLevel, t)!,
       seedColor: Color.lerp(sch.seedColor, oSch.seedColor, t)!,
-      neutral: Color.lerp(sch.neutral, oSch.neutral, t)!,
-      neutralVariant: Color.lerp(sch.neutralVariant, oSch.neutralVariant, t)!,
       custom: {
         ...oSch.custom,
         for (var entry in sch.custom.entries)
@@ -224,15 +228,17 @@ class TonalTheme extends ThemeExtension<TonalTheme> {
           else if (t <= .5)
             entry.key: entry.value,
       },
+      // surfaces
       surfaceDimmest: Color.lerp(sch.surfaceDimmest, oSch.surfaceDimmest, t)!,
       surfaceLessDim: Color.lerp(sch.surfaceLessDim, oSch.surfaceLessDim, t)!,
       surfaceMid: Color.lerp(sch.surfaceMid, oSch.surfaceMid, t)!,
-      surfaceLessBright:
-          Color.lerp(sch.surfaceLessBright, oSch.surfaceLessBright, t)!,
+      surfaceAlmostBright:
+          Color.lerp(sch.surfaceAlmostBright, oSch.surfaceAlmostBright, t)!,
       surfaceBrightest:
           Color.lerp(sch.surfaceBrightest, oSch.surfaceBrightest, t)!,
       surfaceBright: Color.lerp(sch.surfaceBright, oSch.surfaceBright, t)!,
       surfaceDim: Color.lerp(sch.surfaceDim, oSch.surfaceDim, t)!,
+
       surfaceContainerLowest: Color.lerp(
           sch.surfaceContainerLowest, oSch.surfaceContainerLowest, t)!,
       surfaceContainerLow:
@@ -316,117 +322,67 @@ class TonalTheme extends ThemeExtension<TonalTheme> {
 
 extension DynamicSchemeExtension on DynamicScheme {
   Color surfaceColor(double brightness) {
-    final tone = lerpDouble(
-      MaterialDynamicColors.surfaceDim.tone(this),
-      MaterialDynamicColors.surfaceBright.tone(this),
+    return Color.lerp(
+      Color(MaterialDynamicColors.surfaceDim.getArgb(this)),
+      Color(MaterialDynamicColors.surfaceBright.getArgb(this)),
       brightness,
-    )!
-        .round();
-
-    return Color(neutralPalette.get(tone));
+    )!;
   }
-}
-
-enum TonalThemeBackground {
-  grayscale,
-  normal,
-  colorful,
 }
 
 class TonalScheme with Diagnosticable implements ColorScheme {
-  factory TonalScheme.fromSeed({
-    required Color seedColor,
+  factory TonalScheme.fromHue({
+    required double hue,
     required Brightness brightness,
+    int colors = 2,
+    double backgroundTone = 1.0,
+    double accentTone = 1.0,
     double contrastLevel = 0.0,
-    TonalThemeBackground background = TonalThemeBackground.normal,
     Variant variant = Variant.vibrant,
     Map<String, int>? customColors,
   }) =>
-      TonalScheme.fromColorScheme(
-        ColorScheme.fromSeed(
-          seedColor: seedColor,
-          brightness: brightness,
-        ),
-        seedColor: seedColor,
+      TonalScheme.fromSeed(
+        seedColor: Color(Hct.from(hue, 35, 40).toInt()),
+        brightness: brightness,
+        foregroundTone: accentTone,
+        backgroundTone: backgroundTone,
         contrastLevel: contrastLevel,
         variant: variant,
-        background: background,
         customColors: customColors,
       );
 
-  factory TonalScheme.fromColorScheme(
-    ColorScheme colorScheme, {
-    Color? seedColor,
-    double contrastLevel = 0.0,
-    TonalThemeBackground background = TonalThemeBackground.normal,
-    Variant variant = Variant.vibrant,
-    Map<String, int>? customColors,
-  }) {
-    if (colorScheme.brightness.isLight &&
-        background == TonalThemeBackground.colorful) {
-      background = TonalThemeBackground.normal;
-    }
-
-    Color neutral, neutralVariant;
-    (neutral, neutralVariant) = switch (background) {
-      TonalThemeBackground.grayscale => () {
-          final greyPalette = _tonalPaletteOf(Colors.grey);
-          int neutralTone = colorScheme.brightness.isDark ? 6 : 98;
-          int variantTone = colorScheme.brightness.isDark ? 30 : 90;
-          return (
-            Color(greyPalette.get(neutralTone)),
-            Color(greyPalette.get(variantTone)),
-          );
-        }(),
-      TonalThemeBackground.normal => (
-          colorScheme.surface,
-          colorScheme.surfaceVariant,
-        ),
-      TonalThemeBackground.colorful => (
-          colorScheme.surface.blend(colorScheme.secondaryContainer, 30),
-          colorScheme.surfaceVariant.blend(colorScheme.secondaryContainer, 30),
-        ),
-    };
-
-    return TonalScheme.fromColors(
-      brightness: colorScheme.brightness,
-      seedColor: seedColor ?? colorScheme.primary,
-      primary: colorScheme.primary,
-      secondary: colorScheme.secondary,
-      tertiary: colorScheme.tertiary,
-      neutral: neutral,
-      neutralVariant: neutralVariant,
-      variant: variant,
-      contrastLevel: contrastLevel,
-      customColors: customColors,
-    );
-  }
-
-  static TonalPalette _tonalPaletteOf(Color color) =>
-      TonalPalette.fromHct(Hct.fromInt(color.value));
-
-  factory TonalScheme.fromColors({
-    required Brightness brightness,
+  factory TonalScheme.fromSeed({
     required Color seedColor,
-    required Color primary,
-    required Color secondary,
-    required Color tertiary,
-    required Color neutral,
-    required Color neutralVariant,
-    Variant variant = Variant.vibrant,
+    required Brightness brightness,
+    int colors = 2,
+    double backgroundTone = 1.0,
+    double foregroundTone = 1.0,
     double contrastLevel = 0.0,
+    Variant variant = Variant.vibrant,
     Map<String, int>? customColors,
   }) {
+    assert(1 <= colors && colors <= 3);
+
+    final sourceColorArgb = seedColor.value;
+    final hue = Cam16.fromInt(sourceColorArgb).hue;
+    final secHue = colors >= 3 ? (hue + 120) % 360 : hue;
+    final terHue = colors >= 2 ? (hue + 60) % 360 : hue;
+    final double chroma = 35;
+    final double accentChroma = chroma * foregroundTone;
+    final double backChroma = chroma * backgroundTone;
+    /*Log.i(
+        "hue: $hue chroma: ${hct.chroma} tone: ${hct.tone} backChroma: ${backChroma}");*/
+
     final scheme = DynamicScheme(
-      sourceColorArgb: seedColor.value,
+      sourceColorArgb: sourceColorArgb,
       variant: variant,
       isDark: brightness.isDark,
       contrastLevel: contrastLevel,
-      primaryPalette: _tonalPaletteOf(primary),
-      secondaryPalette: _tonalPaletteOf(secondary),
-      tertiaryPalette: _tonalPaletteOf(tertiary),
-      neutralPalette: _tonalPaletteOf(neutral),
-      neutralVariantPalette: _tonalPaletteOf(neutralVariant),
+      primaryPalette: TonalPalette.of(hue, accentChroma),
+      secondaryPalette: TonalPalette.of(secHue, accentChroma / 3),
+      tertiaryPalette: TonalPalette.of(terHue, accentChroma / 2),
+      neutralPalette: TonalPalette.of(hue, backChroma / 12),
+      neutralVariantPalette: TonalPalette.of(hue, backChroma / 6),
     );
 
     Color c(DynamicColor dynColor) {
@@ -437,8 +393,6 @@ class TonalScheme with Diagnosticable implements ColorScheme {
       brightness: brightness,
       contrastLevel: scheme.contrastLevel,
       seedColor: Color(scheme.sourceColorArgb),
-      neutral: neutral,
-      neutralVariant: neutralVariant,
       custom: {
         if (customColors != null)
           for (var entry in customColors.entries)
@@ -450,14 +404,15 @@ class TonalScheme with Diagnosticable implements ColorScheme {
       surfaceVariant: c(MaterialDynamicColors.surfaceVariant),
       onSurfaceVariant: c(MaterialDynamicColors.onSurfaceVariant),
       surfaceDimmest: scheme.surfaceColor(-0.2),
-      surfaceLessDim: scheme.surfaceColor(.5),
-      surfaceMid: scheme.surfaceColor(.6),
-      surfaceLessBright: scheme.surfaceColor(.9),
-      surfaceBrightest: scheme.surfaceColor(1.1),
+      surfaceLessDim: scheme.surfaceColor(.25),
+      surfaceMid: scheme.surfaceColor(.5),
+      surfaceAlmostBright: scheme.surfaceColor(.94),
+      surfaceBrightest: scheme.surfaceColor(1 + (brightness.isLight ? .2 : .1)),
       surfaceBright: c(MaterialDynamicColors.surfaceBright),
       surfaceDim: c(MaterialDynamicColors.surfaceDim),
       surfaceContainerLowest: c(MaterialDynamicColors.surfaceContainerLowest),
       surfaceContainerLow: c(MaterialDynamicColors.surfaceContainerLow),
+      // light ? scheme.surfaceColor(2 / 3) : scheme.surfaceColor(1 / 3)
       surfaceContainer: c(MaterialDynamicColors.surfaceContainer),
       surfaceContainerHigh: c(MaterialDynamicColors.surfaceContainerHigh),
       surfaceContainerHighest: c(MaterialDynamicColors.surfaceContainerHighest),
@@ -509,10 +464,9 @@ class TonalScheme with Diagnosticable implements ColorScheme {
   }
 
   TonalScheme({
+    required this.brightness,
     required this.seedColor,
     required this.contrastLevel,
-    required this.neutral,
-    required this.neutralVariant,
     this.custom = const {},
     required this.primary,
     required this.onPrimary,
@@ -565,11 +519,10 @@ class TonalScheme with Diagnosticable implements ColorScheme {
     required this.surfaceContainer,
     required this.surfaceContainerHigh,
     required this.surfaceContainerHighest,
-    required this.brightness,
     required this.surfaceDimmest,
     required this.surfaceLessDim,
     required this.surfaceMid,
-    required this.surfaceLessBright,
+    required this.surfaceAlmostBright,
     required this.surfaceBrightest,
   });
 
@@ -588,9 +541,6 @@ class TonalScheme with Diagnosticable implements ColorScheme {
     background: (s) => MaterialDynamicColors.inverseSurface,
     contrastCurve: ContrastCurve(3, 4.5, 7, 11),
   );
-
-  final Color neutral;
-  final Color neutralVariant;
 
   final Color primaryFixed;
   final Color primaryFixedDim;
@@ -613,7 +563,7 @@ class TonalScheme with Diagnosticable implements ColorScheme {
   final Color surfaceContainerLowest;
   final Color surfaceContainerLow;
   final Color surfaceContainer;
-  //final late Color surfaceContainer = _scheme.surfaceColor(_scheme.isDark ? .35 : .6);
+  //final late Color surfaceContainer = _scheme.surfaceColor((_scheme.isDark ? 1 : 2) / 3);
   final Color surfaceContainerHigh;
   final Color surfaceContainerHighest;
 
@@ -621,7 +571,7 @@ class TonalScheme with Diagnosticable implements ColorScheme {
   final Color surfaceDim;
   final Color surfaceLessDim;
   final Color surfaceMid;
-  final Color surfaceLessBright;
+  final Color surfaceAlmostBright;
   final Color surfaceBright;
   final Color surfaceBrightest;
 
@@ -790,6 +740,7 @@ class TonalScheme with Diagnosticable implements ColorScheme {
     Color? inverseTertiary,
     Color? surfaceBright,
     Color? surfaceDim,
+    Color? surfaceBrightContainer,
     Color? surfaceContainerLowest,
     Color? surfaceContainerLow,
     Color? surfaceContainer,
@@ -798,14 +749,12 @@ class TonalScheme with Diagnosticable implements ColorScheme {
     Color? surfaceDimmest,
     Color? surfaceLessDim,
     Color? surfaceMid,
-    Color? surfaceLessBright,
+    Color? surfaceAlmostBright,
     Color? surfaceBrightest,
   }) {
     return TonalScheme(
       seedColor: seedColor ?? this.seedColor,
       contrastLevel: contrastLevel ?? this.contrastLevel,
-      neutral: neutral ?? this.neutral,
-      neutralVariant: neutralVariant ?? this.neutralVariant,
       custom: custom ?? this.custom,
       primary: primary ?? this.primary,
       onPrimary: onPrimary ?? this.onPrimary,
@@ -867,7 +816,7 @@ class TonalScheme with Diagnosticable implements ColorScheme {
       surfaceDimmest: surfaceDimmest ?? this.surfaceDimmest,
       surfaceLessDim: surfaceLessDim ?? this.surfaceLessDim,
       surfaceMid: surfaceMid ?? this.surfaceMid,
-      surfaceLessBright: surfaceLessBright ?? this.surfaceLessBright,
+      surfaceAlmostBright: surfaceAlmostBright ?? this.surfaceAlmostBright,
       surfaceBrightest: surfaceBrightest ?? this.surfaceBrightest,
     );
   }
