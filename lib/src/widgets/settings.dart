@@ -32,18 +32,18 @@ class SettingsGroup extends StatelessWidget {
   const SettingsGroup({
     super.key,
     required this.rows,
-    this.elevation = 1,
+    this.frameBuilder,
   });
 
   final List<Widget> rows;
-  final double elevation;
+  final Widget Function(BuildContext, Widget)? frameBuilder;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final borderRadius = SettingsRow.resolveBorderRadius(theme);
 
-    return Padding(
+    Widget child = Padding(
       padding: _kGroupPadding,
       child: SeparatedColumn(
         separator: PrecisionDivider(
@@ -54,6 +54,12 @@ class SettingsGroup extends StatelessWidget {
         children: rows,
       ),
     );
+
+    if (frameBuilder != null) {
+      child = frameBuilder!(context, child);
+    }
+
+    return child;
   }
 }
 

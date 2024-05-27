@@ -107,7 +107,7 @@ class LnSurfaceDecoration {
     this.margin,
     this.clipBehavior,
     this.shadowColor,
-    this.deep = false,
+    this.deep,
   })  : assert(shape == null || borderRadius == null),
         elevation = deep == true ? 0 : elevation,
         _resolver = resolver,
@@ -126,7 +126,7 @@ class LnSurfaceDecoration {
     this.margin,
     this.clipBehavior,
     this.shadowColor,
-    this.deep = false,
+    this.deep,
   })  : elevation = 0,
         borderOnForeground = false,
         _resolver = resolver,
@@ -145,7 +145,7 @@ class LnSurfaceDecoration {
   final EdgeInsets? margin;
   final Clip? clipBehavior;
   final Color? shadowColor;
-  final bool deep;
+  final bool? deep;
 
   BorderRadiusGeometry? get borderRadius => shape?.borderRadius;
 
