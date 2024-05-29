@@ -12,16 +12,13 @@ class SettingsGroupTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Padding(
-        padding: _kRowInsets.copyWith(top: 0, bottom: 0),
-        child: Text(
-          title,
-          style: theme.textTheme.labelMedium!.copyWith(
-            color: theme.colorScheme.primary,
-            fontWeight: FontWeight.w600,
-          ),
+    return Padding(
+      padding: _kRowInsets.copyWith(top: 0, bottom: 0),
+      child: Text(
+        title,
+        style: theme.textTheme.labelMedium!.copyWith(
+          color: theme.colorScheme.primary,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );

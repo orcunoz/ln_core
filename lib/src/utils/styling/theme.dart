@@ -42,9 +42,11 @@ class LnComputedTheme extends ThemeExtension<LnComputedTheme>
     required this.formsButtonsAlignment,
     required this.backdropColor,
     required this.containerColor,
+    required this.paneContainerColor,
     required this.paneColor,
     required this.subPaneColor,
     required this.containerDecoration,
+    required this.paneContainerDecoration,
     required this.paneDecoration,
     required this.subPaneDecoration,
     required this.paneHeaderDecoration,
@@ -140,12 +142,17 @@ class LnComputedTheme extends ThemeExtension<LnComputedTheme>
 
   final Color containerColor;
 
+  final Color paneContainerColor;
+
   final Color paneColor;
 
   final Color subPaneColor;
 
   @override
   final LnSurfaceDecoration? containerDecoration;
+
+  @override
+  final LnSurfaceDecoration? paneContainerDecoration;
 
   @override
   final LnSurfaceDecoration? paneDecoration;
@@ -221,9 +228,11 @@ class LnComputedTheme extends ThemeExtension<LnComputedTheme>
     EdgeInsets? paneMargin,
     EdgeInsets? subPaneMargin,
     Color? containerColor,
+    Color? paneContainerColor,
     Color? paneColor,
     Color? subPaneColor,
     LnSurfaceDecoration? containerDecoration,
+    LnSurfaceDecoration? paneContainerDecoration,
     LnSurfaceDecoration? paneDecoration,
     LnSurfaceDecoration? subPaneDecoration,
     LnSurfaceDecoration? paneHeaderDecoration,
@@ -267,10 +276,13 @@ class LnComputedTheme extends ThemeExtension<LnComputedTheme>
       backdropColor: backdropColor ?? this.backdropColor,
       backdropPadding: backdropPadding ?? this.backdropPadding,
       containerColor: containerColor ?? this.containerColor,
+      paneContainerColor: paneContainerColor ?? this.paneContainerColor,
       paneColor: paneColor ?? this.paneColor,
       subPaneColor: subPaneColor ?? this.subPaneColor,
       containerPadding: containerPadding ?? this.containerPadding,
       containerDecoration: containerDecoration ?? this.containerDecoration,
+      paneContainerDecoration:
+          paneContainerDecoration ?? this.paneContainerDecoration,
       paneDecoration: paneDecoration ?? this.paneDecoration,
       subPaneDecoration: subPaneDecoration ?? this.subPaneDecoration,
       paneHeaderDecoration: paneHeaderDecoration ?? this.paneHeaderDecoration,
@@ -337,10 +349,14 @@ class LnComputedTheme extends ThemeExtension<LnComputedTheme>
         containerPadding:
             EdgeInsets.lerp(containerPadding, other.containerPadding, t),
         containerColor: Color.lerp(containerColor, other.containerColor, t)!,
+        paneContainerColor:
+            Color.lerp(paneContainerColor, other.paneContainerColor, t)!,
         paneColor: Color.lerp(paneColor, other.paneColor, t)!,
         subPaneColor: Color.lerp(subPaneColor, other.subPaneColor, t)!,
         containerDecoration: LnSurfaceDecoration.lerp(
             containerDecoration, other.containerDecoration, t),
+        paneContainerDecoration: LnSurfaceDecoration.lerp(
+            paneContainerDecoration, other.paneContainerDecoration, t),
         paneDecoration:
             LnSurfaceDecoration.lerp(paneDecoration, other.paneDecoration, t),
         subPaneDecoration: LnSurfaceDecoration.lerp(
@@ -399,6 +415,7 @@ abstract class LnThemeData {
     this.backdropPadding,
     this.containerPadding,
     this.containerDecoration,
+    this.paneContainerDecoration,
     this.paneDecoration,
     this.subPaneDecoration,
     this.paneHeaderDecoration,
@@ -441,6 +458,7 @@ abstract class LnThemeData {
   final EdgeInsets? containerPadding;
 
   final LnSurfaceDecoration? containerDecoration;
+  final LnSurfaceDecoration? paneContainerDecoration;
   final LnSurfaceDecoration? paneDecoration;
   final LnSurfaceDecoration? subPaneDecoration;
   final LnSurfaceDecoration? paneHeaderDecoration;
@@ -483,6 +501,7 @@ class LnTheme extends LnThemeData {
     super.backdropPadding,
     super.containerPadding,
     super.containerDecoration,
+    super.paneContainerDecoration,
     super.paneDecoration,
     super.subPaneDecoration,
     super.paneHeaderDecoration,
@@ -512,6 +531,9 @@ class LnTheme extends LnThemeData {
 
     final resolveContainerColor =
         containerDecoration?.resolveColor ?? (t) => backdropColor;
+
+    final resolvePaneContainerColor =
+        paneContainerDecoration?.resolveColor ?? resolveContainerColor;
 
     return LnComputedTheme(
       dialogsMaxWidth: dialogsMaxWidth ?? LnLayoutConstants.columnWidth,
@@ -548,10 +570,13 @@ class LnTheme extends LnThemeData {
       formsButtonsAlignment: formsButtonsAlignment ?? Alignment.center,
       backdropColor: backdropColor,
       containerColor: resolveContainerColor(theme),
-      paneColor: (paneDecoration?.resolveColor ?? resolveContainerColor)(theme),
+      paneContainerColor: resolvePaneContainerColor(theme),
+      paneColor:
+          (paneDecoration?.resolveColor ?? resolvePaneContainerColor)(theme),
       subPaneColor:
-          (subPaneDecoration?.resolveColor ?? resolveContainerColor)(theme),
+          (subPaneDecoration?.resolveColor ?? resolvePaneContainerColor)(theme),
       containerDecoration: containerDecoration,
+      paneContainerDecoration: paneContainerDecoration,
       paneDecoration: paneDecoration,
       subPaneDecoration: subPaneDecoration,
       paneHeaderDecoration: paneHeaderDecoration,
@@ -598,6 +623,7 @@ class LnTheme extends LnThemeData {
     EdgeInsets? backdropPadding,
     EdgeInsets? containerPadding,
     LnSurfaceDecoration? containerDecoration,
+    LnSurfaceDecoration? paneContainerDecoration,
     LnSurfaceDecoration? paneDecoration,
     LnSurfaceDecoration? subPaneDecoration,
     LnSurfaceDecoration? paneHeaderDecoration,
@@ -642,6 +668,8 @@ class LnTheme extends LnThemeData {
       backdropPadding: backdropPadding ?? this.backdropPadding,
       containerPadding: containerPadding ?? this.containerPadding,
       containerDecoration: containerDecoration ?? this.containerDecoration,
+      paneContainerDecoration:
+          paneContainerDecoration ?? this.paneContainerDecoration,
       paneDecoration: paneDecoration ?? this.paneDecoration,
       subPaneDecoration: subPaneDecoration ?? this.subPaneDecoration,
       paneHeaderDecoration: paneHeaderDecoration ?? this.paneHeaderDecoration,

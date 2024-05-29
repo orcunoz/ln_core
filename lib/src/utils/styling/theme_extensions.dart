@@ -61,7 +61,7 @@ extension ThemeDataExtensions on ThemeData {
     Color? outside,
     num sharpness = 1.0,
   }) =>
-      brightness.borderColor(surface, outside: outside, sharpness: sharpness);
+      onBrightness.borderColor(surface, outside: outside, sharpness: sharpness);
 
   T call<T extends ThemeExtension<T>>() => extension<T>()!;
 }
