@@ -45,7 +45,6 @@ class SlidingDrawersScrollable extends StatefulWidget {
     this.padding,
     this.primary,
     this.controller,
-    this.physics,
     this.dragStartBehavior = DragStartBehavior.start,
     this.clipBehavior = Clip.hardEdge,
     this.restorationId,
@@ -58,7 +57,6 @@ class SlidingDrawersScrollable extends StatefulWidget {
     this.fillViewport = false,
     this.controller,
     this.padding,
-    this.physics,
     this.dragStartBehavior = DragStartBehavior.start,
     this.keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
     this.clipBehavior = Clip.hardEdge,
@@ -103,7 +101,6 @@ class SlidingDrawersScrollable extends StatefulWidget {
   final Clip clipBehavior;
   final String? restorationId;
   final ScrollViewKeyboardDismissBehavior keyboardDismissBehavior;
-  final ScrollPhysics? physics;
   final Widget? child;
 
   @override
@@ -221,7 +218,7 @@ class _SlidingDrawersScrollableState extends State<SlidingDrawersScrollable>
           primary: widget.primary,
           padding: padding.add(scrollableInsets),
           controller: controller,
-          physics: widget.physics,
+          physics: ClampingScrollPhysics(),
           dragStartBehavior: widget.dragStartBehavior,
           clipBehavior: widget.clipBehavior,
           restorationId: widget.restorationId,
@@ -817,9 +814,15 @@ class _SlidingDrawersGroup {
             insideExpandedHeightsSumNotifier.value -
             insideShrinkedHeightsSumNotifier.value;
 
+    final distanceToStart = this.distanceToStart ??
+        switch (direction) {
+          VerticalDirection.up => 0,
+          VerticalDirection.down => double.infinity,
+        };
+
     final newState = SlidingDrawersGroupState(
       atStart: distanceToStart == slideSum,
-      scrollOffsetUnderDrawers: (distanceToStart ?? double.infinity) > slideSum,
+      scrollOffsetUnderDrawers: distanceToStart > slideSum,
       shrinkedHeightsSum: shrinkedHeightsSum,
       allDrawersShrinked: slideableLengthsSum == slideSum,
     );

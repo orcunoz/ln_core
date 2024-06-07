@@ -340,16 +340,19 @@ class TonalScheme with Diagnosticable implements ColorScheme {
     double contrastLevel = 0.0,
     Variant variant = Variant.vibrant,
     Map<String, int>? customColors,
-  }) =>
-      TonalScheme.fromSeed(
-        seedColor: Color(Hct.from(hue, 35, 40).toInt()),
-        brightness: brightness,
-        foregroundTone: accentTone,
-        backgroundTone: backgroundTone,
-        contrastLevel: contrastLevel,
-        variant: variant,
-        customColors: customColors,
-      );
+  }) {
+    assert(hue >= 0 && hue <= 360);
+
+    return TonalScheme.fromSeed(
+      seedColor: Color(Hct.from(hue, 35, 40).toInt()),
+      brightness: brightness,
+      foregroundTone: accentTone,
+      backgroundTone: backgroundTone,
+      contrastLevel: contrastLevel,
+      variant: variant,
+      customColors: customColors,
+    );
+  }
 
   factory TonalScheme.fromSeed({
     required Color seedColor,

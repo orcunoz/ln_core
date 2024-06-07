@@ -105,6 +105,7 @@ extension ShapeBorderExtensions on ShapeBorder {
 
 extension InputBorderExtensions on InputBorder {
   InputBorder? get frameless => copyWith(borderSide: BorderSide.none);
+
   BorderRadius? get borderRadius {
     if (this is OutlineInputBorder) {
       return (this as OutlineInputBorder).borderRadius;
